@@ -346,6 +346,7 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
     <div class="card" id="permEntryCard"></div>
     <div class="card" id="accountCard"></div>
     <div class="card" id="cloudCard"></div>
+    <div class="card" id="supabaseCard"></div>
     <div class="card" id="securityCard"></div>
     <div class="card">
       <div class="sec-title">数据</div>
@@ -1018,6 +1019,7 @@ function renderMore(){
   renderSecurity();
   renderAccount();
   renderCloud();
+  renderSupabase();
   renderPermEntry();
   renderNative();
 
@@ -2657,7 +2659,134 @@ function uploadDirect(){
   });
 }
 
-function renderCloud(){
+/* ---------------- Supabase 同步 ---------------- */
+var SUPABASE_KEY = 'hcsalon.supabase';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtYnBsaWRmb3dvdmNrb2hvanBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0MDcyNjgsImV4cCI6MjExMDk4MzI2OH0.kOqwmaE2gZXQyBGoNnI7T8ZiY9x1QcXbe1PKuozNSlI';
+var SUPABASE_URL = 'https://umbplidfowovckohojpm.supabase.co';
+var SUPABASE_TABLE = 'records';
+
+function getSupabase(){
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(SUPABASE_KEY) || '{}'); } catch (e) { }
+  return Object.assign({ url: SUPABASE_URL, anon: SUPABASE_ANON, table: SUPABASE_TABLE, auto: false }, saved);
+}
+function saveSupabase(c){
+  try { localStorage.setItem(SUPABASE_KEY, JSON.stringify(c)); } catch (e) { }
+}
+function supabasePhone(){ return currentPhone || 'default'; }
+function supabaseBase(c){ return (c.url || SUPABASE_URL).replace(/\/+$/, '') + '/rest/v1/' + (c.table || SUPABASE_TABLE); }
+
+function renderSupabase(){
+  var box = $('#supabaseCard');
+  if (!box) return;
+  var c = getSupabase();
+  var phone = supabasePhone();
+  box.innerHTML =
+      '<div class="sec-title">Supabase 同步</div>'
+    + '<div class="row" style="border:none"><div class="grow">'
+    +   '<div class="nm">' + (c.url ? '已配置' : '未配置') + '</div>'
+    +   '<div class="mt">' + esc(c.url || '') + '</div>'
+    +   '<div class="mt">账号：' + esc(phone) + '</div></div>'
+    +   '<button class="btn sm" data-act="supabase-config">配置</button></div>'
+    + '<div class="btnrow" style="margin-top:8px">'
+    +   '<button class="btn" data-act="supabase-test">测试</button>'
+    +   '<button class="btn primary" data-act="supabase-up">上传</button>'
+    +   '<button class="btn" data-act="supabase-down">下载</button></div>'
+    + '<div class="hint">网页和手机用同一 Supabase，数据互通。配置里可开自动同步。</div>';
+}
+
+function supabaseConfigSheet(){
+  var c = getSupabase();
+  openSheet({
+    title:'Supabase 同步',
+    body:
+      '<label class="field"><span>Project URL</span><input class="input" id="sb-url" value="'
+    +   esc(c.url || SUPABASE_URL) + '"></label>'
+    + '<label class="field"><span>anon key</span><input class="input" id="sb-anon" value="'
+    +   esc(c.anon || SUPABASE_ANON) + '"></label>'
+    + '<label class="field"><span>表名</span><input class="input" id="sb-table" value="'
+    +   esc(c.table || 'records') + '"></label>'
+    + '<div class="row" style="border:none"><div class="grow"><div class="nm">改动后自动同步</div>'
+    + '<div class="mt">打开后改完自动上传</div></div>'
+    + '<button class="btn sm" id="sb-auto">' + (c.auto ? '开' : '关') + '</button></div>'
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn ghost" data-cancel>取消</button>'
+    +   '<button class="btn primary" data-save>保存</button></div>',
+    onMount:function(w, close){
+      var autoVal = !!c.auto;
+      var ab = w.querySelector('#sb-auto');
+      ab.onclick = function(){ autoVal = !autoVal; ab.textContent = autoVal ? '开' : '关'; };
+      w.querySelector('[data-cancel]').onclick = close;
+      w.querySelector('[data-save]').onclick = function(){
+        saveSupabase({
+          url: (w.querySelector('#sb-url').value || '').trim(),
+          anon: (w.querySelector('#sb-anon').value || '').trim(),
+          table: (w.querySelector('#sb-table').value || 'records').trim(),
+          auto: autoVal
+        });
+        close(); renderSupabase();
+        toast('已保存');
+      };
+    }
+  });
+}
+
+function supabaseHeaders(c){
+  return { 'apikey': c.anon, 'Authorization': 'Bearer ' + c.anon, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
+}
+
+function supabaseUpsert(){
+  var c = getSupabase();
+  var payload = [{ phone: supabasePhone(), data: JSON.stringify(DB), updated_at: new Date().toISOString() }];
+  return fetch(supabaseBase(c), { method: 'POST', headers: supabaseHeaders(c), body: JSON.stringify(payload) })
+    .then(function(res){ if (res.status===401||res.status===403) throw new Error('key/权限不对('+res.status+')'); if (!res.ok) throw new Error('上传失败 HTTP '+res.status); return res.text(); });
+}
+
+function supabaseFetch(){
+  var c = getSupabase();
+  return fetch(supabaseBase(c) + '?phone=eq.' + encodeURIComponent(supabasePhone()) + '&select=*', {
+    method: 'GET', headers: { 'apikey': c.anon, 'Authorization': 'Bearer ' + c.anon }
+  }).then(function(res){ if (res.status===401||res.status===403) throw new Error('key/权限不对('+res.status+')'); if (!res.ok) throw new Error('下载失败 HTTP '+res.status); return res.json(); });
+}
+
+function supabaseTest(){
+  var c = getSupabase();
+  if (!c.url || !c.anon) { toast('请先配置 Supabase'); return; }
+  toast('正在测试…');
+  supabaseFetch().then(function(){ toast('Supabase 连接正常'); })
+    .catch(function(e){ toast('测试失败：' + (e && e.message || '未知')); });
+}
+
+function supabaseUpload(){
+  var c = getSupabase();
+  if (!c.url || !c.anon) { toast('请先配置 Supabase'); return; }
+  toast('正在上传到 Supabase…');
+  supabaseUpsert().then(function(){ c.lastSync = Date.now(); saveSupabase(c); renderSupabase(); toast('已上传到 Supabase'); })
+    .catch(function(e){ toast('上传失败：' + (e && e.message || '未知')); });
+}
+
+function supabaseDownload(){
+  var c = getSupabase();
+  if (!c.url || !c.anon) { toast('请先配置 Supabase'); return; }
+  toast('正在从 Supabase 下载…');
+  supabaseFetch().then(function(rows){
+    if (!rows || !rows.length) { toast('云端还没有该账号的数据'); return; }
+    var last = rows[rows.length - 1];
+    var remote;
+    try { remote = JSON.parse(last.data); } catch(e){ toast('云端数据解析失败'); return; }
+    if (!remote || (!remote.members && !remote.records)) { toast('云端数据不是账本'); return; }
+    var msg = '从 Supabase 拉到（' + ((remote.members||[]).length) + ' 会员 / ' + ((remote.records||[]).length) + ' 流水）。合并到本机吗？';
+    confirmBox(msg, function(){ mergeQuiet(remote); toast('已合并 Supabase 数据'); render(); }, '合并');
+  }).catch(function(e){ toast('下载失败：' + (e && e.message || '未知')); });
+}
+
+function supabaseAutoSync(){
+  var c = getSupabase();
+  if (!c.auto || !c.url || !c.anon) return;
+  supabaseUpsert().then(function(){ var cc = getSupabase(); cc.lastSync = Date.now(); saveSupabase(cc); })
+    .catch(function(){ });
+}function renderCloud(){
+XXXX
   var box = $('#cloudCard');
   if (!box) return;
   var c = getCloud();
@@ -3323,6 +3452,10 @@ var ACT = {
     toast(c.auto ? '已开启自动同步' : '已关闭自动同步');
   },
   'cloud-test': function(){ cloudCall('test'); },
+  'supabase-config': function(){ supabaseConfigSheet(); },
+  'supabase-test': function(){ supabaseTest(); },
+  'supabase-up': function(){ supabaseUpload(); },
+  'supabase-down': function(){ supabaseDownload(); },
   'cloud-up': function(){ cloudCall('upload'); },
   'cloud-down': function(){ cloudCall('download'); },
   'lock-config': function(){ lockConfigSheet(); },
