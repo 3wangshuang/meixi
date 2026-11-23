@@ -2786,7 +2786,6 @@ function supabaseAutoSync(){
   supabaseUpsert().then(function(){ var cc = getSupabase(); cc.lastSync = Date.now(); saveSupabase(cc); })
     .catch(function(){ });
 }function renderCloud(){
-XXXX
   var box = $('#cloudCard');
   if (!box) return;
   var c = getCloud();
