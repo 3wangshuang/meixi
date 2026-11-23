@@ -1,0 +1,3744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f7f5f2">
+<meta name="format-detection" content="telephone=no">
+<title>美发会员账本</title>
+<style>
+:root{
+  --bg:#f7f5f2; --card:#ffffff; --ink:#1e1b19; --sub:#8b837b; --line:#eae5df;
+  --accent:#c08a3e; --accent-soft:#f8efe1; --green:#2f7d63; --red:#c0453a;
+  --r:14px; --sh:0 2px 10px rgba(30,27,25,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#131211;--card:#1c1a18;--ink:#f2efec;--sub:#9b938a;--line:#2b2724;
+  --accent:#d8a35c;--accent-soft:#2a2118;--green:#4fae8b;--red:#e06a5e;--sh:none;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  padding-bottom:calc(88px + env(safe-area-inset-bottom));overflow-x:hidden}
+[hidden]{display:none!important}
+button{font-family:inherit}
+
+/* 顶栏 */
+.topbar{position:sticky;top:0;z-index:20;
+  background:var(--bg);                                /* 老 WebView 回退 */
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);padding:calc(10px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line)}
+.tb-title{font-size:19px;font-weight:700;letter-spacing:.5px}
+.tb-sub{font-size:12px;color:var(--sub);margin-top:1px}
+
+.wrap{padding:12px 14px 4px}
+.view{display:none}
+.view.active{display:block;animation:viewIn .26s cubic-bezier(.22,.61,.36,1) both}
+
+/* 切页动画：整页上浮淡入 + 卡片依次浮起 */
+@keyframes viewIn{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.view.active > .wrap > *{animation:cardIn .34s cubic-bezier(.22,.61,.36,1) both}
+.view.active > .wrap > *:nth-child(1){animation-delay:.01s}
+.view.active > .wrap > *:nth-child(2){animation-delay:.045s}
+.view.active > .wrap > *:nth-child(3){animation-delay:.08s}
+.view.active > .wrap > *:nth-child(4){animation-delay:.115s}
+.view.active > .wrap > *:nth-child(n+5){animation-delay:.15s}
+@keyframes cardIn{
+  from{opacity:0;transform:translateY(14px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .view.active, .view.active > .wrap > *{animation:none!important}
+}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-bottom:12px}
+.sec-title{font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.4px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+.sec-title .more{font-weight:500;color:var(--accent);font-size:12px}
+.hint{font-size:12px;color:var(--sub);line-height:1.6;margin-top:8px}
+.p{font-size:14px;color:var(--ink);margin:0 0 14px}
+
+/* 首页大字 */
+.hero{background:linear-gradient(135deg,#211d1a,#3a3129 60%,#4a3b2a);border:none;color:#fff}
+.hero .lbl{font-size:12px;opacity:.72;letter-spacing:2px}
+.hero .amt{font-size:34px;font-weight:700;letter-spacing:-.5px;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.hero .meta{font-size:12px;opacity:.72;margin-top:8px;line-height:1.5}
+.hero .split{display:flex;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.16)}
+.hero .split>div{flex:1;min-width:0}
+.hero .split span{display:block;font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero .split b{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 8px;text-align:center}
+.stat b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:var(--sub)}
+
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qbtn{display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:var(--accent-soft);
+  border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--ink);font-size:14px;font-weight:600;text-align:left}
+.qbtn small{font-weight:400;font-size:11px;color:var(--sub)}
+
+/* 列表 */
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.ava{width:38px;height:38px;flex:0 0 38px;border-radius:12px;background:var(--accent-soft);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.grow{flex:1;min-width:0}
+.nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amt-r{font-variant-numeric:tabular-nums;font-weight:700;font-size:15px}
+.pos{color:var(--green)}
+.neg{color:var(--red)}
+.daytag{font-size:12px;color:var(--sub);margin:14px 0 6px;font-weight:600}
+.empty{text-align:center;color:var(--sub);font-size:13px;padding:26px 10px}
+
+/* 表单 */
+.field{display:block;margin-bottom:12px}
+.field>span{display:block;font-size:12px;color:var(--sub);margin-bottom:5px}
+.input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+  font-size:15px;color:var(--ink);outline:none;font-family:inherit}
+.input:focus{border-color:var(--accent)}
+select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),linear-gradient(135deg,var(--sub) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 19px,calc(100% - 11px) 19px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.ta{min-height:104px;resize:vertical;line-height:1.5}
+.ta2{min-height:64px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 92px;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;
+  padding:11px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.btn:active{transform:scale(.985)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{background:transparent;color:var(--sub)}
+.btn.danger{background:transparent;border-color:var(--red);color:var(--red)}
+.btn.block{display:block;width:100%}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+.btnrow{display:flex;gap:10px;margin-top:6px}
+.btnrow .btn{flex:1}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--sub);border-radius:999px;
+  padding:7px 14px;font-size:13px;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+
+.searchbar{margin-bottom:12px}
+.rec-check{width:20px;height:20px;flex:0 0 20px;border:2px solid var(--sub);border-radius:6px;
+  display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700}
+.rec-check.on{background:var(--accent);border-color:var(--accent)}
+.tips{font-size:12.5px;color:var(--sub);line-height:1.7}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent);margin-right:5px}
+/* 平台标签 */
+.badge-mt{background:#FFE9DB;color:#D2540C;border:1px solid #FFD2B8;font-weight:700}
+.badge-dy{background:#E8F1FF;color:#1457C4;border:1px solid #C9DDFF;font-weight:700}
+.badge-wx{background:#E6F7E6;color:#07C160;border:1px solid #B9EBC9;font-weight:700}
+@media (prefers-color-scheme:dark){
+  .badge-mt{background:#3A2416;color:#FFB27A;border-color:#5A3720}
+  .badge-dy{background:#152438;color:#8AB4FF;border-color:#22375A}
+  .badge-wx{background:#12331C;color:#54D98A;border-color:#1E4A2E}
+}
+
+/* 底部导航：长椭圆 · 液态玻璃 */
+.tabbar{
+  position:fixed;
+  left:14px; right:14px;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  z-index:30;
+  display:flex; align-items:center; gap:2px;
+  padding:7px 8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.62);                    /* 老 WebView 回退 */
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,.58) 0%,
+      rgba(255,255,255,.16) 45%,
+      rgba(255,255,255,.06) 62%,
+      rgba(255,255,255,.26) 100%),
+    rgba(250,248,245,.52);
+  backdrop-filter:blur(22px) saturate(180%);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:
+    0 10px 30px rgba(30,27,25,.16),
+    0 2px 8px rgba(30,27,25,.08),
+    inset 0 1px 0 rgba(255,255,255,.9),
+    inset 0 -1px 0 rgba(255,255,255,.4),
+    inset 0 0 18px rgba(255,255,255,.25);
+}
+.tab{
+  flex:1; position:relative;
+  border:none; background:none;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  color:var(--sub); font-size:10px;
+  padding:7px 0 6px;
+  border-radius:999px; cursor:pointer;
+  transition:background .22s ease, color .22s ease, box-shadow .22s ease, transform .15s ease;
+}
+.tab.on{
+  color:#fff;
+  background:linear-gradient(180deg,#c99050,#a5722f);
+  box-shadow:0 4px 14px rgba(160,110,45,.4), inset 0 1px 0 rgba(255,255,255,.45);
+}
+.tab:active{transform:scale(.96)}
+.tab svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .22s cubic-bezier(.22,.61,.36,1)}
+.tab.on svg{transform:scale(1.1)}
+.tab:active svg{transform:scale(.92)}
+
+@media (prefers-color-scheme:dark){
+  .tabbar{
+    background:rgba(40,37,34,.62);
+    background:
+      linear-gradient(180deg,
+        rgba(255,255,255,.14) 0%,
+        rgba(255,255,255,.03) 45%,
+        rgba(255,255,255,.02) 62%,
+        rgba(255,255,255,.07) 100%),
+      rgba(38,35,32,.55);
+    border-color:rgba(255,255,255,.14);
+    box-shadow:
+      0 10px 30px rgba(0,0,0,.55),
+      0 2px 8px rgba(0,0,0,.3),
+      inset 0 1px 0 rgba(255,255,255,.18),
+      inset 0 -1px 0 rgba(255,255,255,.05);
+  }
+  .tab.on{
+    color:#1e1b19;
+    background:linear-gradient(180deg,#d8a35c,#b07f36);
+    box-shadow:0 4px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+}
+
+/* 悬浮球 */
+.fab{position:fixed;z-index:40;width:54px;height:54px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#c08a3e,#8f6428);color:#fff;box-shadow:0 6px 18px rgba(150,105,40,.4);
+  display:flex;align-items:center;justify-content:center;font-size:20px;touch-action:none;cursor:pointer}
+.fab svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round}
+
+/* 弹层 */
+.sheet-wrap{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.sheet-wrap .mask{position:absolute;inset:0;background:rgba(0,0,0,.42);opacity:0;transition:opacity .18s}
+.sheet-wrap.in .mask{opacity:1}
+.sheet{position:relative;width:100%;max-width:560px;max-height:88vh;overflow:auto;background:var(--card);
+  border-radius:18px 18px 0 0;transform:translateY(14px);opacity:.4;transition:.18s ease;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+.sheet-wrap.in .sheet{transform:none;opacity:1}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 10px;
+  font-size:16px;font-weight:700;position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line)}
+.hd .x{border:none;background:none;font-size:16px;color:var(--sub);padding:4px 6px}
+.bd{padding:14px 16px}
+.big-money{display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.big-money span{font-size:26px;color:var(--sub)}
+.big-money input{flex:1;border:none;background:none;font-size:34px;font-weight:700;padding:6px 0;outline:none;color:var(--ink)}
+
+.toast{position:fixed;left:50%;bottom:112px;transform:translate(-50%,10px);z-index:99;
+  background:rgba(30,27,25,.92);color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;
+  opacity:0;transition:.2s;pointer-events:none;max-width:80%}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* 锁屏 */
+#lockScreen,#loginScreen{position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:26px}
+#loginScreen{z-index:210;align-items:flex-start;padding-top:12vh}
+#lockScreen .lockbox,#loginScreen .lockbox{width:100%;max-width:320px;text-align:center}
+#lockScreen .lockicon,#loginScreen .lockicon{font-size:38px;line-height:1;margin-bottom:12px}
+#lockScreen .locktitle,#loginScreen .locktitle{font-size:19px;font-weight:700}
+#lockScreen .locktip,#loginScreen .locktip{font-size:13px;color:var(--sub);margin:6px 0 20px;line-height:1.6}
+#lockScreen .lockpin,#loginScreen .lockpin{width:100%;text-align:center;font-size:26px;letter-spacing:10px;
+  padding:12px 8px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);outline:none}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-title" id="tbTitle">工作台</div>
+  <div class="tb-sub" id="tbSub">今天的账，随手记</div>
+</div>
+
+<!-- ================= 工作台 ================= -->
+<section class="view active" id="v-home">
+  <div class="wrap">
+    <div class="card hero">
+      <div class="lbl">今日现金入账</div>
+      <div class="amt" id="homeToday">¥0.00</div>
+      <div class="split">
+        <div><span>今日消费额</span><b id="homeTurnover">¥0.00</b></div>
+        <div><span>今日预收</span><b id="homePre">¥0.00</b></div>
+      </div>
+      <div class="meta" id="homeMeta">还没有记录</div>
+    </div>
+    <div class="grid3" id="homeStats"></div>
+    <div class="card">
+      <div class="sec-title">快捷操作</div>
+      <div class="quick">
+        <button class="qbtn" data-act="go" data-view="scan">识别账单<small>粘贴微信/支付宝文本</small></button>
+        <button class="qbtn" data-act="new-member">开卡 / 加会员<small>储值 · 次卡 · 折扣</small></button>
+        <button class="qbtn" data-act="new-consume">手动记一笔<small>剪发 / 染烫 / 护理</small></button>
+        <button class="qbtn" data-act="go" data-view="records">查流水<small>按天对账</small></button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title">最近 5 笔<span class="more" data-act="go" data-view="records">全部 ›</span></div>
+      <div id="homeRecent"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 会员 ================= -->
+<section class="view" id="v-members">
+  <div class="wrap">
+    <div class="searchbar">
+      <input id="memberSearch" class="input" placeholder="搜索姓名 / 手机 / 卡号">
+    </div>
+    <div class="chips" id="memberSortChips" style="margin-bottom:12px">
+      <button class="chip on" data-ms="created">开卡时间</button>
+      <button class="chip" data-ms="last">最近消费</button>
+      <button class="chip" data-ms="count">消费次数</button>
+      <button class="chip" data-ms="balance">余额</button>
+    </div>
+    <div class="card" id="memberList"></div>
+    <button class="btn primary block" data-act="new-member">＋ 新建会员</button>
+    <div style="height:14px"></div>
+  </div>
+</section>
+
+<!-- ================= 识别账单 ================= -->
+<section class="view" id="v-scan">
+  <div class="wrap">
+    <div class="card">
+      <div class="sec-title">账单文本</div>
+      <textarea id="billText" class="input ta" placeholder="把账单文字粘贴到这里，例如：&#10;微信支付 支付成功&#10;付款金额 ¥128.00&#10;商户全称：XX造型工作室&#10;支付时间 2025-03-08 15:20:11"></textarea>
+      <div class="btnrow">
+        <button class="btn primary" data-act="parse">解析</button>
+        <button class="btn" data-act="paste">读剪贴板</button>
+        <button class="btn ghost" data-act="clearBill">清空</button>
+      </div>
+      <div class="hint">支持微信支付 / 支付宝 / 银行短信 / 手打小票文本。识别结果全部可手动修改后再入账。</div>
+    </div>
+    <div id="scanResult"></div>
+  </div>
+</section>
+
+<!-- ================= 流水 ================= -->
+<section class="view" id="v-records">
+  <div class="wrap">
+    <div class="chips" id="recFilter" style="margin-bottom:12px">
+      <button class="chip on" data-rf="today">今天</button>
+      <button class="chip" data-rf="week">本周</button>
+      <button class="chip" data-rf="month">本月</button>
+      <button class="chip" data-rf="all">全部</button>
+      <button class="chip" data-rf="__batch" data-batchmode="1">批量删除</button>
+      <button class="chip" data-act="rec-filter">筛选</button>
+    </div>
+    <div id="recBatchBar" class="card" style="padding:10px 14px;display:none">
+      <div class="tips" style="margin:0 0 8px">已选 <b id="recBatchCount">0</b> 笔</div>
+      <div class="btnrow">
+        <button class="btn danger" data-act="batch-delete">删除所选</button>
+        <button class="btn ghost" data-act="batch-cancel">取消</button>
+      </div>
+    </div>
+    <div class="card" id="recList"></div>
+  </div>
+</section>
+
+<!-- ================= 设置 ================= -->
+<section class="view" id="v-more">
+  <div class="wrap">
+    <div class="card" id="permEntryCard"></div>
+    <div class="card" id="accountCard"></div>
+    <div class="card" id="cloudCard"></div>
+    <div class="card" id="securityCard"></div>
+    <div class="card">
+      <div class="sec-title">数据</div>
+      <div class="tips" id="dataInfo"></div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="btn" data-act="export">导出备份</button>
+        <button class="btn" data-act="import">导入备份</button>
+      </div>
+      <button class="btn danger block" style="margin-top:10px" data-act="wipe">清空全部数据</button>
+    </div>
+    <div class="card">
+      <div class="sec-title">界面</div>
+      <div class="row" style="border:none">
+        <div class="grow"><div class="nm">应用内悬浮球</div><div class="mt">可拖动，点一下快速记账</div></div>
+        <button class="btn sm" id="fabToggle" data-act="toggle-fab">开</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title">记账规则</div>
+      <div class="row" style="border:none">
+        <div class="grow"><div class="nm">次卡核销计入消费额</div>
+          <div class="mt">按「套餐售价 ÷ 总次数」记金额；现金入账不受影响</div></div>
+        <button class="btn sm" id="packValueToggle" data-act="toggle-pack-value">关</button>
+      </div>
+      <div class="hint">关闭时核销金额记 0（钱算在购卡当天，符合预收口径）。切换只影响之后新核销的记录，历史不重算。</div>
+    </div>
+    <div class="card">
+      <div class="sec-title">关于「跨应用悬浮窗」</div>
+      <div class="tips" id="aboutTips">
+        纯网页（WebView）无法在其他 APP 上方绘制悬浮窗，也无法读取其他 APP 的界面内容。<br><br>
+        要做到「在微信/支付宝里直接弹窗抓账单」，必须有 Android 原生代码（悬浮窗权限 TYPE_APPLICATION_OVERLAY + 无障碍服务 AccessibilityService），这部分无法用网页打包工具实现。<br><br>
+        本 APP 采用的可行方案：<b>复制账单文字 → 切换到本 APP（或点悬浮球）→ 一键读剪贴板 → 自动解析入账</b>，全流程 3 秒内完成。
+      </div>
+    </div>
+    <div class="card" id="nativeCard" hidden></div>
+
+    <!-- ================= 权限设置 ================= -->
+    <section class="view" id="v-perms">
+      <div class="wrap">
+        <button class="btn ghost block" style="margin-bottom:10px" data-act="go" data-view="more">‹ 返回设置</button>
+        <div class="card">
+          <div class="sec-title">悬浮窗</div>
+          <div class="tips" id="permOverlayDesc"></div>
+          <button class="btn block" id="permOverlayBtn" style="margin-top:10px">去开启</button>
+        </div>
+        <div class="card">
+          <div class="sec-title">无障碍服务（读屏抓账单）</div>
+          <div class="tips" id="permA11yDesc"></div>
+          <button class="btn block" id="permA11yBtn" style="margin-top:10px">去开启</button>
+        </div>
+        <div class="card">
+          <div class="sec-title">后台运行 / 电池</div>
+          <div class="tips">部分手机系统会限制后台服务，导致悬浮球被关闭。建议在电池设置里给本应用开「允许后台运行」。</div>
+          <button class="btn block" style="margin-top:10px" data-act="perm-battery">去后台设置</button>
+        </div>
+        <div class="card">
+          <div class="sec-title">权限状态</div>
+          <div class="tips" id="permSummary"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 操作日志 ================= -->
+    <div class="card">
+      <div class="sec-title">版本</div>
+      <div class="tips" id="verTips">美发会员账本 v1.2 · 纯前端离线版<br>数据保存在本机浏览器存储中，卸载 APP 会丢失，请定期导出备份。</div>
+      <button class="btn sm ghost" style="margin-top:10px" data-act="diag">诊断信息（出问题点这里）</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 操作日志 ================= -->
+<section class="view" id="v-logs">
+  <div class="wrap">
+    <button class="btn ghost block" style="margin-bottom:10px" data-act="go" data-view="more">‹ 返回设置</button>
+    <div class="card">
+      <div class="sec-title">操作日志<span class="more" data-act="clear-logs">清空</span></div>
+      <div id="logList"></div>
+    </div>
+  </div>
+</section>
+
+<nav class="tabbar">
+  <button class="tab on" data-act="go" data-view="home">
+    <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>工作台</span>
+  </button>
+  <button class="tab" data-act="go" data-view="members">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-3.8 3.4-5.8 7.5-5.8s7.5 2 7.5 5.8"/></svg><span>会员</span>
+  </button>
+  <button class="tab" data-act="go" data-view="scan">
+    <svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3M7 12h10"/></svg><span>识别</span>
+  </button>
+  <button class="tab" data-act="go" data-view="records">
+    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h9"/></svg><span>流水</span>
+  </button>
+  <button class="tab" data-act="go" data-view="more">
+    <svg viewBox="0 0 24 24"><path d="M4 8h7M17 8h3M4 16h3M13 16h7"/><circle cx="14" cy="8" r="2.4"/><circle cx="10" cy="16" r="2.4"/></svg><span>设置</span>
+  </button>
+</nav>
+
+<button class="fab" id="fab" hidden>
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- 登录（未登录时显示） -->
+<div id="loginScreen" hidden>
+  <div class="lockbox">
+    <div class="lockicon">💈</div>
+    <div class="locktitle">美发账本</div>
+    <div class="locktip">手机号 + 密码登录<br>仅限已授权的手机号</div>
+    <input id="loginPhone" class="input" type="tel" inputmode="numeric" maxlength="11"
+           placeholder="手机号" style="text-align:center;font-size:17px;margin-bottom:10px">
+    <input id="loginPass" class="input" type="password" maxlength="20"
+           placeholder="密码（至少 6 位）" style="text-align:center;font-size:17px">
+    <button class="btn primary block" style="margin-top:14px" data-act="do-login">登录 / 注册</button>
+    <div class="locktip" style="margin-top:14px;font-size:12px">
+      首次输入手机号和密码会自动创建账号；<br>数据保存在本机，同步在「设置 → 云同步」里配置
+    </div>
+  </div>
+</div>
+
+<!-- 锁屏（开启解锁后启动时显示） -->
+<div id="lockScreen" hidden>
+  <div class="lockbox">
+    <div class="lockicon">🔒</div>
+    <div class="locktitle">账本已锁定</div>
+    <div class="locktip" id="lockTip">请输入 APP 密码</div>
+    <div id="lockPinWrap">
+      <input id="lockPin" class="lockpin" type="password" inputmode="numeric"
+             maxlength="6" placeholder="······" autocomplete="off">
+      <button class="btn primary block" style="margin-top:12px" data-act="lock-pin-ok">解锁</button>
+    </div>
+    <button class="btn block" id="lockBio" data-act="lock-bio" hidden
+            style="margin-top:10px">指纹 / 系统密码解锁</button>
+    <button class="btn ghost block" style="margin-top:14px" data-act="lock-forgot">忘记密码</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   1) 存储层：localStorage 单键 JSON
+   ========================================================= */
+/* ===== 账号与数据分区 =====
+   - 账号表：hcsalon.accounts（手机号 -> 密码哈希）
+   - 当前登录：hcsalon.current
+   - 数据键：hcsalon.data.<手机号>（未登录时用老键 hcsalon.v1，仅做迁移来源）
+*/
+var ACCOUNTS_KEY = 'hcsalon.accounts';
+var CURRENT_KEY  = 'hcsalon.current';
+var LEGACY_KEY   = 'hcsalon.v1';
+
+var currentPhone = '';
+try { currentPhone = localStorage.getItem(CURRENT_KEY) || ''; } catch (e) { }
+
+function dataKey(phone){ return phone ? ('hcsalon.data.' + phone) : LEGACY_KEY; }
+
+var LS = dataKey(currentPhone);
+
+var DEF_PROJECTS = ['洗剪吹','剪发','染发','烫发','护理','洗头','造型'];
+var DEFAULTS = {
+  version: 1, members: [], records: [], logs: [],
+  settings: {
+    fab: true, fabPos: null, packValue: false,
+    lock: 'off',              /* off 关闭 | pin 密码 | bio 指纹(需原生版) */
+    pin: '',                  /* 4~6 位数字 */
+    authOnDelete: true,       /* 删除类操作是否需要验证 */
+    projects: DEF_PROJECTS.slice()
+  }
+};
+
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+function loadDB(){
+  var d = clone(DEFAULTS);
+  try {
+    var raw = localStorage.getItem(LS);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      d.members  = parsed.members  || [];
+      d.records  = parsed.records  || [];
+      d.logs     = parsed.logs     || [];
+      d.settings = Object.assign(clone(DEFAULTS.settings), parsed.settings || {});
+      d.updatedAt = parsed.updatedAt || 0;
+      if (!d.settings.projects || !d.settings.projects.length) {
+        d.settings.projects = DEF_PROJECTS.slice();
+      }
+    }
+  } catch (e) { console.warn('读取存储失败', e); }
+  return d;
+}
+
+var DB = loadDB();
+
+/* 授权手机号：只有这些号码能登录/注册（改这里需要重新编译） */
+var ALLOWED_PHONES = ['13569465600', '15533812598'];
+
+/* ---- 账号工具 ---- */
+function getAccounts(){
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+function saveAccounts(a){
+  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a)); } catch (e) { }
+}
+function hashPass(s){
+  var h = 5381;
+  for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) & 0xFFFFFFFF;
+  return 'h' + (h >>> 0).toString(16);
+}
+
+var storageOK = true;
+function save(){
+  try {
+    DB.updatedAt = Date.now();
+    localStorage.setItem(LS, JSON.stringify(DB));
+    scheduleAutoSync();      // 自动同步：改动后延迟合并上传
+  }
+  catch (e) {
+    storageOK = false;
+    toast('保存失败：本机存储不可用或已满');
+  }
+}
+
+/* =========================================================
+   2) 工具函数
+   ========================================================= */
+var uid = function(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); };
+
+/* 金额统一用「分」做整数运算，避免浮点误差 */
+function fen(v){
+  var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g,''));
+  return isFinite(n) ? Math.round(n*100) : 0;
+}
+function yuan(f){ return (Math.round(f||0)/100).toFixed(2); }
+function yuanPlain(f){ var y=(Math.round(f||0)/100); return Number.isInteger(y) ? String(y) : y.toFixed(2); }
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function $(s,r){ return (r||document).querySelector(s); }
+function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+function h(html){
+  var t = document.createElement('template');
+  t.innerHTML = String(html).trim();
+  return t.content.firstElementChild;
+}
+
+function pad2(n){ return n<10 ? '0'+n : ''+n; }
+function fmtTime(ts){ var d=new Date(ts); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+function fmtDate(ts){ var d=new Date(ts); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function fmtDT(ts){ return fmtDate(ts)+' '+fmtTime(ts); }
+
+function todayStart(){ var d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+function weekStart(){ var d=new Date(); var w=(d.getDay()+6)%7; d.setDate(d.getDate()-w); d.setHours(0,0,0,0); return d.getTime(); }
+function monthStart(){ var d=new Date(); return new Date(d.getFullYear(),d.getMonth(),1).getTime(); }
+
+function discText(d){
+  if (!d || d >= 1) return '不打折';
+  return (Math.round(d*100)/10) + '折';
+}
+function discountInput(d){
+  if (!d || d >= 1) return '';
+  return String(Math.round(d*100)/10);
+}
+
+var toastTimer;
+function toast(msg){
+  var t = $('#toast');
+  if (!t) { t = h('<div id="toast" class="toast"></div>'); document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('on'); }, 1900);
+}
+
+/* =========================================================
+   3) 弹层系统
+   ========================================================= */
+var openSheets = [];   // 当前打开的弹窗栈，返回键用它
+
+function openSheet(opt){
+  var wrap = h('<div class="sheet-wrap">'
+    + '<div class="mask"></div>'
+    + '<div class="sheet">'
+    +   '<div class="hd"><span>'+esc(opt.title||'')+'</span><button class="x">✕</button></div>'
+    +   '<div class="bd"></div>'
+    + '</div></div>');
+  $('.bd', wrap).innerHTML = opt.body || '';
+  document.body.appendChild(wrap);
+  requestAnimationFrame(function(){ wrap.classList.add('in'); });
+
+  var closed = false;
+  function close(){
+    if (closed) return; closed = true;
+    wrap.classList.remove('in');
+    openSheets = openSheets.filter(function(x){ return x !== wrap; });
+    setTimeout(function(){ if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 200);
+  }
+  $('.mask', wrap).onclick = close;
+  $('.x', wrap).onclick = close;
+  if (opt.onMount) opt.onMount(wrap, close);
+
+  // 收集能被返回键触发的关闭回调
+  wrap.__hcClose = close;
+  openSheets.push(wrap);
+  return { el:wrap, close:close };
+}
+
+function confirmBox(msg, onOk, okText){
+  openSheet({
+    title:'请确认',
+    body:'<p class="p">'+esc(msg)+'</p>'
+      + '<div class="btnrow"><button class="btn ghost" data-cancel>取消</button>'
+      + '<button class="btn danger" data-ok>'+esc(okText||'确定')+'</button></div>',
+    onMount:function(w,close){
+      $('[data-cancel]',w).onclick = close;
+      $('[data-ok]',w).onclick = function(){ close(); if(onOk) onOk(); };
+    }
+  });
+}
+
+function chipValue(scope, sel){
+  var on = $(sel, scope);
+  return on ? on.getAttribute('data-m') : '';
+}
+/* 单选 chip */
+document.addEventListener('click', function(e){
+  var c = e.target.closest ? e.target.closest('.chips .chip[data-m]') : null;
+  if (!c) return;
+  $$('.chip', c.parentNode).forEach(function(x){ x.classList.toggle('on', x === c); });
+});
+
+/* =========================================================
+   4) 会员 / 账目 基础操作
+   ========================================================= */
+function getMember(id){
+  for (var i=0;i<DB.members.length;i++) if (DB.members[i].id===id) return DB.members[i];
+  return null;
+}
+function packLeft(m){
+  if (!m || !m.packs) return 0;
+  return m.packs.reduce(function(s,p){ return s + (p.left||0); }, 0);
+}
+/* 次卡单次折算价（分）：套餐售价 ÷ 总次数 */
+function packUnit(p){
+  if (!p || !p.price || !p.total) return 0;
+  return Math.round(p.price / p.total);
+}
+function memberLine(m){
+  var a = [];
+  if (m.balance) a.push('储值 ¥'+yuan(m.balance));
+  if (m.packs && m.packs.length) a.push('次卡余 '+packLeft(m)+' 次');
+  if (m.discount && m.discount < 1) a.push(discText(m.discount));
+  return a.join(' · ') || '未开卡';
+}
+function newCode(){
+  return 'M' + Date.now().toString(36).slice(-5).toUpperCase();
+}
+
+function addRecord(r){
+  r.id = r.id || uid();
+  r.ts = r.ts || Date.now();
+  DB.records.push(r);
+  save();
+  return r;
+}
+
+/* =========================================================
+   5) 视图渲染
+   ========================================================= */
+var TITLES = {
+  home:    ['工作台','今天的账，随手记'],
+  members: ['会员','储值 · 次卡 · 折扣'],
+  scan:    ['识别账单','粘贴文本，自动解析'],
+  records: ['流水','每一笔都对得上'],
+  more:    ['设置','备份与数据'],
+  logs:    ['操作日志','余额与次卡的每一笔变动'],
+  perms:   ['权限设置','悬浮窗 · 无障碍']
+};
+var view = 'home';
+
+function go(v){
+  view = v;
+  $$('.view').forEach(function(el){ el.classList.toggle('active', el.id === 'v-'+v); });
+  $$('.tab').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-view') === v); });
+  var t = TITLES[v] || ['',''];
+  $('#tbTitle').textContent = t[0];
+  $('#tbSub').textContent = t[1];
+  render();
+  window.scrollTo(0,0);
+}
+
+function render(){
+  if (view === 'home') renderHome();
+  else if (view === 'members') renderMembers();
+  else if (view === 'records') renderRecords();
+  else if (view === 'more') renderMore();
+  else if (view === 'logs') renderLogs();
+  else if (view === 'perms') renderPerms();
+}
+
+/* 口径：充值 / 购卡算现金入账；消费只有「非储值、非次卡」才算现金 */
+function isCashRec(r){
+  if (r.kind !== 'consume') return true;
+  /* 储值卡、次卡、团购券：钱早就收过，不算当天现金 */
+  return r.method !== '储值卡' && r.method !== '次卡' && r.method !== '团购券';
+}
+
+function renderHome(){
+  var ts = todayStart();
+  var today = DB.records.filter(function(r){ return r.ts >= ts; });
+
+  var cash = 0, turnover = 0, pre = 0, orders = 0, stored = 0;
+  for (var i = 0; i < today.length; i++) {
+    var r = today[i];
+    var amt = r.amount || 0;
+    if (r.kind === 'consume') {
+      orders++;
+      turnover += amt;
+      if (isCashRec(r)) cash += amt;
+      else stored += amt;                 // 储值 / 次卡消费：钱早就收过了
+    } else {
+      pre += amt;                         // 充值 / 购卡：预收
+      cash += amt;
+    }
+  }
+
+  $('#homeToday').textContent = '¥' + yuan(cash);
+  $('#homeTurnover').textContent = '¥' + yuan(turnover);
+  $('#homePre').textContent = '¥' + yuan(pre);
+  $('#homeMeta').textContent = orders
+    ? ('今日 ' + orders + ' 单' + (stored > 0
+        ? ' · 其中储值/次卡消费 ¥' + yuan(stored) + '（已预收，不计现金）'
+        : ' · 全部为现金/扫码实收'))
+    : '今天还没有记账，点下面的「识别账单」开始';
+
+  var ms = monthStart();
+  var monthTurnover = DB.records.filter(function(x){
+    return x.ts >= ms && x.kind === 'consume';
+  }).reduce(function(a,x){ return a + (x.amount||0); }, 0);
+
+  $('#homeStats').innerHTML =
+      '<div class="stat"><b>'+DB.members.length+'</b><span>会员数</span></div>'
+    + '<div class="stat"><b>'+orders+'</b><span>今日单数</span></div>'
+    + '<div class="stat"><b>¥'+yuanPlain(monthTurnover)+'</b><span>本月消费</span></div>';
+
+  var recent = DB.records.slice().sort(function(a,b){ return b.ts - a.ts; }).slice(0,5);
+  $('#homeRecent').innerHTML = recent.length ? recent.map(recRowHTML).join('')
+    : '<div class="empty">暂无记录</div>';
+}
+
+function recRowHTML(r){
+  var sign = r.kind === 'consume' ? '-' : '+';
+  var cls = r.kind === 'consume' ? 'neg' : 'pos';
+  var who = r.memberName || '散客';
+
+  /* 平台标签（团购才显示） */
+  var plat = '';
+  if (r.platform === '美团') plat = '<span class="badge badge-mt">美团</span>';
+  else if (r.platform === '抖音') plat = '<span class="badge badge-dy">抖音</span>';
+  else if (r.platform === '微信') plat = '<span class="badge badge-wx">微信</span>';
+
+  /* 备注里如果已带平台前缀，去掉，避免重复 */
+  var noteText = r.note || '';
+  if (r.platform && noteText.indexOf(r.platform + ' · ') === 0) {
+    noteText = noteText.slice((r.platform + ' · ').length);
+  }
+  var tail = [r.method, noteText].filter(Boolean).join(' · ');
+  var linkBtn = (r.kind === 'consume' && !r.memberId)
+    ? '<button class="btn sm ghost" data-act="link-member" data-id="'+r.id+'"'
+      + ' style="margin-right:6px;padding:5px 9px">关联</button>'
+    : '';
+  var chk = '';
+  if (recBatchMode) {
+    var on = recBatchSel[r.id] ? ' on' : '';
+    chk = '<div class="rec-check'+on+'" data-batch="'+r.id+'">'
+      + (on ? '✓' : '') + '</div>';
+  }
+  return '<div class="row" data-act="record" data-id="'+r.id+'">'
+    + chk
+    + '<div class="ava">'+esc(who.slice(0,1))+'</div>'
+    + '<div class="grow"><div class="nm">'+esc(who)+plat+' <span class="mt">'+fmtTime(r.ts)+'</span></div>'
+    +   '<div class="mt">'+esc(tail || kindText(r.kind))+'</div></div>'
+    + linkBtn
+    + '<div class="amt-r '+cls+'">'+sign+'¥'+yuan(r.amount)+'</div>'
+    + '</div>';
+}
+function kindText(k){
+  return k === 'consume' ? '消费' : (k === 'recharge' ? '储值充值' : '次卡购卡');
+}
+
+/* 每个会员的消费统计：最近一次、次数、金额 */
+function memberStats(){
+  var st = {};
+  for (var i = 0; i < DB.records.length; i++) {
+    var r = DB.records[i];
+    if (r.kind !== 'consume' || !r.memberId) continue;
+    var o = st[r.memberId];
+    if (!o) { o = st[r.memberId] = { last:0, count:0, sum:0 }; }
+    o.count++;
+    o.sum += r.amount || 0;
+    if ((r.ts||0) > o.last) o.last = r.ts;
+  }
+  return st;
+}
+
+function renderMembers(){
+  var q = ($('#memberSearch').value || '').trim().toLowerCase();
+  var st = memberStats();
+  var sort = DB.settings.memberSort || 'created';
+
+  var list = DB.members.filter(function(m){
+    if (!q) return true;
+    return (m.name||'').toLowerCase().indexOf(q) >= 0
+        || (m.phone||'').indexOf(q) >= 0
+        || (m.code||'').toLowerCase().indexOf(q) >= 0;
+  });
+
+  list.sort(function(a, b){
+    var sa = st[a.id] || { last:0, count:0 };
+    var sb = st[b.id] || { last:0, count:0 };
+    if (sort === 'last')    return (sb.last||0) - (sa.last||0);
+    if (sort === 'count')   return ((sb.count||0) - (sa.count||0)) || ((sb.last||0) - (sa.last||0));
+    if (sort === 'balance') return (b.balance||0) - (a.balance||0);
+    return (b.createdAt||0) - (a.createdAt||0);
+  });
+
+  $('#memberList').innerHTML = list.length ? list.map(function(m){
+    var s = st[m.id] || { last:0, count:0 };
+    var extra = '';
+    if (sort === 'last') {
+      extra = s.last ? (' · 近次 ' + fmtDate(s.last).slice(5)) : ' · 未消费';
+    } else if (sort === 'count') {
+      extra = ' · ' + s.count + ' 单';
+    }
+    return '<div class="row" data-act="member" data-id="'+m.id+'">'
+      + '<div class="ava">'+esc((m.name||'?').slice(0,1))+'</div>'
+      + '<div class="grow"><div class="nm">'+esc(m.name)+'</div>'
+      +   '<div class="mt">'+esc(m.phone || m.code || '')+' · '+esc(memberLine(m))+esc(extra)+'</div>'
+      +   (m.note ? '<div class="mt" style="opacity:.85">备注：'+esc(m.note.replace(/\n/g,' ').slice(0,26))
+            + (m.note.length > 26 ? '…' : '')+'</div>' : '')
+      + '</div>'
+      + '<div class="mt">›</div></div>';
+  }).join('') : '<div class="empty">没有会员，点下面按钮新建</div>';
+}
+
+var recFilter = 'today';
+var recFrom = 0, recTo = 0;   // 自定义筛选时间段（毫秒）
+var recBatchMode = false;
+var recBatchSel = {};
+function renderRecords(){
+  var from = 0, to = 0;
+  if (recFilter === 'today') from = todayStart();
+  else if (recFilter === 'week') from = weekStart();
+  else if (recFilter === 'month') from = monthStart();
+  else if (recFilter === 'custom') { from = recFrom; to = recTo; }
+
+  var list = DB.records.filter(function(r){
+    if (recFilter === 'custom') return r.ts >= from && r.ts <= to;
+    return r.ts >= from;
+  }).sort(function(a,b){ return b.ts - a.ts; });
+
+  if (!list.length) { $('#recList').innerHTML = '<div class="empty">这个时间段没有记录</div>'; return; }
+
+  var unlinked = list.filter(function(r){ return r.kind === 'consume' && !r.memberId; }).length;
+  var html = unlinked
+    ? '<div class="hint" style="margin:0 0 10px">有 ' + unlinked + ' 笔消费还没关联会员，点行尾「关联」挂到会员名下。</div>'
+    : '';
+  var lastDay = '';
+  list.forEach(function(r){
+    var d = fmtDate(r.ts);
+    if (d !== lastDay) {
+      lastDay = d;
+      var dayRecs = list.filter(function(rec){ return fmtDate(rec.ts) === d; });
+      var dCash = 0, dTurn = 0;
+      for (var di = 0; di < dayRecs.length; di++) {
+        var dr = dayRecs[di];
+        var da = dr.amount || 0;
+        if (dr.kind === 'consume') {
+          dTurn += da;
+          if (isCashRec(dr)) dCash += da;
+        } else {
+          dCash += da;
+        }
+      }
+      html += '<div class="daytag">'+d+' · 现金 ¥'+yuan(dCash)+' · 消费 ¥'+yuan(dTurn)+'</div>';
+    }
+    html += recRowHTML(r);
+  });
+  $('#recList').innerHTML = html;
+  renderBatchBar();
+}
+function recFilterSheet(){
+  var now = new Date();
+  var defFrom = fmtDTFull(new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0).getTime());
+  var defTo   = fmtDTFull(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).getTime());
+  var curFrom = recFrom ? fmtDTFull(recFrom) : defFrom;
+  var curTo   = recTo ? fmtDTFull(recTo) : defTo;
+
+  openSheet({
+    title:'按时间段筛选',
+    body:
+      '<label class="field"><span>开始时间（到 秒）</span>'
+    +   '<input class="input" id="rf-from" value="' + esc(curFrom) + '" placeholder="2026-11-22 00:00:00"></label>'
+    + '<label class="field"><span>结束时间（到 秒）</span>'
+    +   '<input class="input" id="rf-to" value="' + esc(curTo) + '" placeholder="2026-11-22 23:59:59"></label>'
+    + '<div class="field"><span>快捷</span><div class="chips" id="rf-quick">'
+    +   [['today','今天'],['yest','昨天'],['7d','最近7天'],['month','本月']].map(function(o){
+          return '<button class="chip" data-q="'+o[0]+'">'+o[1]+'</button>'; }).join('')
+    + '</div></div>'
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn" data-clear>清除筛选</button>'
+    +   '<button class="btn primary" data-ok>确定</button></div>',
+    onMount:function(w, close){
+      function setRange(ff, tt){
+        w.querySelector('#rf-from').value = fmtDTFull(ff);
+        w.querySelector('#rf-to').value = fmtDTFull(tt);
+      }
+      function quick(v){
+        var d = new Date();
+        if (v === 'today')      setRange(new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0).getTime(), new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59).getTime());
+        else if (v === 'yest'){ var y=new Date(d); y.setDate(d.getDate()-1); setRange(new Date(y.getFullYear(),y.getMonth(),y.getDate(),0,0,0).getTime(), new Date(y.getFullYear(),y.getMonth(),y.getDate(),23,59,59).getTime()); }
+        else if (v === '7d'){ var s=new Date(d); s.setDate(d.getDate()-6); setRange(new Date(s.getFullYear(),s.getMonth(),s.getDate(),0,0,0).getTime(), new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59).getTime()); }
+        else if (v === 'month') setRange(new Date(d.getFullYear(),d.getMonth(),1,0,0,0).getTime(), new Date(d.getFullYear(),d.getMonth()+1,0,23,59,59).getTime());
+      }
+      $$('#rf-quick .chip', w).forEach(function(c){ c.onclick = function(){ quick(c.getAttribute('data-q')); }; });
+      w.querySelector('[data-clear]').onclick = function(){
+        recFilter = 'all'; recFrom = 0; recTo = 0;
+        $$('#recFilter .chip').forEach(function(x){ x.classList.remove('on'); });
+        var allC = $$('#recFilter .chip').filter(function(x){ return x.getAttribute('data-rf') === 'all'; })[0];
+        if (allC) allC.classList.add('on');
+        close(); renderRecords(); renderBatchBar(); toast('已清除筛选');
+      };
+      w.querySelector('[data-ok]').onclick = function(){
+        var f = parseDTFull(w.querySelector('#rf-from').value);
+        var t = parseDTFull(w.querySelector('#rf-to').value);
+        if (isNaN(f) || isNaN(t)) { toast('时间格式：2026-11-22 12:08:30'); return; }
+        if (t < f) { toast('结束时间不能早于开始'); return; }
+        recFilter = 'custom'; recFrom = f; recTo = t;
+        $$('#recFilter .chip').forEach(function(x){ x.classList.remove('on'); });
+        close(); renderRecords(); renderBatchBar(); toast('已按时间段筛选');
+      };
+    }
+  });
+}
+
+/* 格式化含秒：2026-11-22 12:08:30 */
+function fmtDTFull(ts){
+  var d = new Date(ts), p = function(n){ return n < 10 ? ('0'+n) : (''+n); };
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+
+function renderBatchBar(){
+  var bar = $('#recBatchBar');
+  if (!bar) return;
+  bar.style.display = recBatchMode ? 'block' : 'none';
+  var cnt = 0;
+  for (var k in recBatchSel) if (recBatchSel[k]) cnt++;
+  var el = $('#recBatchCount');
+  if (el) el.textContent = cnt;
+}
+
+function renderMore(){
+  // 核心卡片：账号 / 云同步 / 安全 / 权限（保留显示）
+  renderSecurity();
+  renderAccount();
+  renderCloud();
+  renderPermEntry();
+  renderNative();
+
+  // 次要卡片折叠成「更多设置」入口（动态插入 v-more）
+  var vm = $('#v-more');
+  if (vm) {
+    // 已有入口则复用
+    var entry = $('#moreSubEntry');
+    if (!entry) {
+      entry = document.createElement('button');
+      entry.className = 'btn sm block';
+      entry.id = 'moreSubEntry';
+      entry.setAttribute('data-act', 'more-sub');
+      entry.style.margin = '6px 0';
+      var wr = $('.wrap', vm);
+      if (wr) wr.appendChild(entry);
+    }
+    entry.textContent = '更多设置（数据 / 界面 / 记账规则 / 关于）';
+  }
+
+  // 隐藏 v-more 里"数据 / 界面 / 记账规则 / 关于"四张静态卡片
+  if (vm) {
+    $$('.card', vm).forEach(function(card){
+      var st = $('.sec-title', card);
+      if (st) {
+        var t = st.textContent || '';
+        if (t.indexOf('数据') === 0 || t.indexOf('界面') === 0
+            || t.indexOf('记账规则') === 0 || t.indexOf('关于') === 0) {
+          card.style.display = 'none';
+        }
+      }
+    });
+    var about = $('#aboutTips');
+    if (about) about.closest('.card').style.display = 'none';
+  }
+}
+
+/* 更多设置：二级弹窗 */
+function moreSubSheet(){
+  openSheet({
+    title:'更多设置',
+    body:
+      '<div class="row" data-more-sub="data"><div class="grow"><div class="nm">数据</div><div class="mt">导出 / 导入 / 清空</div></div><div class="mt">›</div></div>'
+    + '<div class="row" data-more-sub="rules"><div class="grow"><div class="nm">记账规则</div><div class="mt">次卡核销 / 常用项目</div></div><div class="mt">›</div></div>'
+    + '<div class="row" data-more-sub="ui"><div class="grow"><div class="nm">界面</div><div class="mt">应用内悬浮球</div></div><div class="mt">›</div></div>'
+    + '<div class="row" data-more-sub="about"><div class="grow"><div class="nm">关于 / 版本</div></div><div class="mt">›</div></div>'
+    + '<div class="btnrow" style="margin-top:14px"><button class="btn ghost block" data-cancel>取消</button></div>',
+    onMount:function(w, close){
+      w.querySelector('[data-cancel]').onclick = close;
+      $$('[data-more-sub]', w).forEach(function(r){
+        r.onclick = function(){
+          close();
+          var k = r.getAttribute('data-more-sub');
+          if (k === 'data')   dataSubSheet();
+          else if (k === 'rules') rulesSubSheet();
+          else if (k === 'ui')    uiSubSheet();
+          else if (k === 'about') aboutSubSheet();
+        };
+      });
+    }
+  });
+}
+function dataSubSheet(){
+  openSheet({
+    title:'数据',
+    body:
+      '<div class="tips" style="margin-bottom:10px">会员 '+DB.members.length+' 人 · 流水 '+DB.records.length+' 笔<br>存储状态：' + (storageOK ? '正常' : '异常') + '</div>'
+    + '<div class="btnrow"><button class="btn" data-act="export">导出备份</button><button class="btn" data-act="import">导入备份</button></div>'
+    + '<button class="btn danger block" style="margin-top:10px" data-act="wipe">清空全部数据</button>'
+  });
+}
+function rulesSubSheet(){
+  openSheet({
+    title:'记账规则',
+    body:
+      '<div class="row" style="border:none"><div class="grow"><div class="nm">次卡核销计入消费额</div><div class="mt">按「售价÷次数」记金额</div></div>'
+    + '<button class="btn sm" id="packValueToggle2" data-act="toggle-pack-value">关</button></div>'
+    + '<div class="hint">关闭时核销金额记 0（钱算在购卡当天）。</div>',
+    onMount:function(w){ var b=$('#packValueToggle2'); if(b) b.textContent = DB.settings.packValue ? '开' : '关'; }
+  });
+}
+function uiSubSheet(){
+  openSheet({
+    title:'界面',
+    body:
+      '<div class="row" style="border:none"><div class="grow"><div class="nm">应用内悬浮球</div><div class="mt">可拖动，点一下快速记账</div></div>'
+    + '<button class="btn sm" id="fabToggle2" data-act="toggle-fab">开</button></div>',
+    onMount:function(w){ var b=$('#fabToggle2'); if(b) b.textContent = DB.settings.fab ? '开' : '关'; }
+  });
+}
+function aboutSubSheet(){
+  openSheet({
+    title:'关于',
+    body:
+      '<div class="tips">美发账本Pro v4.5<br>数据保存在本机，请定期导出备份。</div>'
+    + '<button class="btn sm ghost" style="margin-top:10px" data-act="diag">诊断信息</button>'
+  });
+}
+
+/* 安全与解锁卡片 */
+function renderSecurity(){
+  var box = $('#securityCard');
+  if (!box) return;
+
+  var mode = lockMode();
+  var info = nativeBridgeInfo();
+  var bioOK = info.bio;
+  var modeText = mode === 'off' ? '已关闭'
+    : (mode === 'bio'
+        ? (bioOK ? '指纹 / 系统密码'
+                 : (info.has ? '指纹（APK 版本过旧，已退回密码）'
+                             : '指纹（网页版不支持，已退回密码）'))
+        : 'APP 密码');
+  var authOn = DB.settings.authOnDelete !== false;
+
+  box.innerHTML =
+      '<div class="sec-title">安全与解锁</div>'
+    + '<div class="row" style="border:none"><div class="grow">'
+    +   '<div class="nm">启动解锁</div><div class="mt">' + modeText + '</div></div>'
+    +   '<button class="btn sm" data-act="lock-config">设置</button></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">删除需要验证</div><div class="mt">'
+    +   (authOn ? '二次确认 + 验证身份' : '只二次确认，不验证身份') + '</div></div>'
+    +   '<button class="btn sm' + (authOn ? ' primary' : '') + '" data-act="toggle-auth-delete">'
+    +   (authOn ? '开' : '关') + '</button></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">操作日志</div><div class="mt">共 ' + DB.logs.length
+    +   ' 条 · 充值/扣款/核销/删除全留痕</div></div>'
+    +   '<button class="btn sm ghost" data-act="open-logs">查看</button></div>'
+    + (mode === 'pin' && !DB.settings.pin
+        ? '<div class="hint" style="color:var(--red)">还没设密码，解锁会被跳过，请点「设置」补上。</div>' : '');
+}
+
+/* 解锁方式设置 */
+function lockConfigSheet(){
+  var mode = lockMode();
+  var info = nativeBridgeInfo();
+  var bio = info.bio;
+
+  var bridgeTip = bio
+    ? '指纹模式会调用系统的指纹 / 图案 / 密码验证，需要手机本身已设置锁屏。'
+    : (info.has
+        ? '检测到原生桥（' + (info.ver || '版本未知') + '），但这个 APK 里没有指纹接口。'
+          + '请用 v1.2 的 AIDE 工程重新编译安装 —— 只替换 assets 里的 HTML 不够，Java 代码也必须重新编译进 APK。'
+        : '没检测到原生桥：当前是网页版环境，只能用 APP 密码。'
+          + '<br>加载地址：' + esc(String(location.href).slice(0, 90))
+          + '<br>原生悬浮窗版 v1.2 才有指纹。');
+
+  openSheet({
+    title:'启动解锁',
+    body:
+      '<div class="hint" style="margin-bottom:12px">选「关闭」后，打开 APP 不再需要验证。</div>'
+    + '<div class="chips" id="lockModeChips" style="margin-bottom:14px">'
+    +   '<button class="chip' + (mode === 'off' ? ' on' : '') + '" data-m="off">关闭</button>'
+    +   '<button class="chip' + (mode === 'pin' ? ' on' : '') + '" data-m="pin">APP 密码</button>'
+    +   (bio ? '<button class="chip' + (mode === 'bio' ? ' on' : '') + '" data-m="bio">指纹 / 系统密码</button>' : '')
+    + '</div>'
+    + '<label class="field" id="pinField"><span>APP 密码（4~6 位数字）</span>'
+    +   '<input class="input" id="lock-pin-set" type="password" inputmode="numeric" maxlength="6"'
+    +   ' value="' + esc(DB.settings.pin || '') + '" placeholder="留空=不设密码"></label>'
+    + '<div class="hint">' + bridgeTip + '</div>'
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn ghost" data-cancel>取消</button>'
+    +   '<button class="btn primary" data-save>保存</button></div>',
+    onMount: function(w, close){
+      var chips = w.querySelector('#lockModeChips');
+      var field = w.querySelector('#pinField');
+
+      function refreshField(){
+        var m = chipValue(w, '#lockModeChips .chip.on');
+        field.hidden = (m === 'off');
+      }
+      chips.addEventListener('click', function(){ setTimeout(refreshField, 0); });
+      refreshField();
+
+      w.querySelector('[data-cancel]').onclick = close;
+      w.querySelector('[data-save]').onclick = function(){
+        var m = chipValue(w, '#lockModeChips .chip.on') || 'off';
+        var pin = (w.querySelector('#lock-pin-set').value || '').replace(/\D/g, '');
+
+        if (m !== 'off' && pin.length < 4) { toast('请设置 4~6 位数字密码'); return; }
+        if (m === 'bio' && !bio) { toast('当前环境不支持指纹，请选 APP 密码'); return; }
+
+        DB.settings.lock = m;
+        if (pin) DB.settings.pin = pin;
+        save();
+        close();
+        renderSecurity();
+        toast(m === 'off' ? '已关闭启动解锁'
+          : ('已开启：' + (m === 'bio' ? '指纹解锁' : '密码解锁')));
+      };
+    }
+  });
+}
+
+/* =========================================================
+   6) 会员表单 / 详情
+   ========================================================= */
+function memberForm(m){
+  var isNew = !m;
+  var d = m || { name:'', phone:'', code:'', discount:1, balance:0, packs:[], note:'' };
+
+  openSheet({
+    title: isNew ? '新建会员' : '编辑会员',
+    body:
+      '<label class="field"><span>姓名 *</span><input class="input" id="f-name" value="'+esc(d.name)+'" placeholder="如 张三"></label>'
+    + '<label class="field"><span>手机号</span><input class="input" id="f-phone" inputmode="tel" value="'+esc(d.phone||'')+'" placeholder="选填"></label>'
+    + '<label class="field"><span>卡号</span><input class="input" id="f-code" value="'+esc(d.code||'')+'" placeholder="留空自动生成"></label>'
+    + '<label class="field"><span>折扣（填 8.8 表示 8.8 折，留空=不打折）</span><input class="input" id="f-disc" inputmode="decimal" value="'+discountInput(d.discount)+'" placeholder="如 8.8"></label>'
+    + (isNew ?
+        '<label class="field"><span>首次储值（元，选填）</span><input class="input" id="f-bal" inputmode="decimal" placeholder="0"></label>'
+      + '<label class="field"><span>次卡套餐（选填）</span><div class="row2">'
+      +   '<input class="input" id="f-packname" placeholder="名称，如 洗吹卡">'
+      +   '<input class="input" id="f-packcnt" inputmode="numeric" placeholder="次数"></div></label>'
+      + '<label class="field"><span>套餐售价（元，选填）</span><input class="input" id="f-packprice" inputmode="decimal" placeholder="0"></label>'
+      : '')
+    + '<label class="field"><span>备注（可多行）</span><textarea class="input ta2" id="f-note" placeholder="发质 / 惯用发型师 / 过敏 / 送的次数…">'+esc(d.note||'')+'</textarea></label>'
+    + '<div class="btnrow"><button class="btn ghost" data-cancel>取消</button>'
+    + '<button class="btn primary" data-save>保存</button></div>',
+
+    onMount: function(w, close){
+      $('[data-cancel]', w).onclick = close;
+      $('[data-save]', w).onclick = function(){
+        var name = w.querySelector('#f-name').value.trim();
+        if (!name) { toast('请填写姓名'); return; }
+
+        var phone = w.querySelector('#f-phone').value.trim();
+        var code  = w.querySelector('#f-code').value.trim() || (m && m.code) || newCode();
+        var discRaw = parseFloat(w.querySelector('#f-disc').value);
+        var discount = (isFinite(discRaw) && discRaw > 0 && discRaw < 10) ? Math.round(discRaw*10)/100 : 1;
+        var note  = w.querySelector('#f-note').value.trim();
+
+        if (isNew) {
+          var mm = {
+            id: uid(), name: name, phone: phone, code: code, discount: discount,
+            balance: 0, packs: [], note: note, createdAt: Date.now()
+          };
+          DB.members.push(mm);
+
+          var bal = fen(w.querySelector('#f-bal').value);
+          if (bal > 0) {
+            mm.balance += bal;
+            addRecord({
+              kind:'recharge', ts: Date.now(), memberId:mm.id, memberName:mm.name,
+              amount: bal, listAmount: bal, method:'现金',
+              note:'开卡储值', source:'manual'
+            });
+            logAction('recharge', {
+              memberId: mm.id, memberName: mm.name,
+              delta: bal, before: 0, after: mm.balance, note: '开卡储值'
+            });
+          }
+          var pname = w.querySelector('#f-packname').value.trim();
+          var pcnt  = parseInt(w.querySelector('#f-packcnt').value, 10);
+          if (pname && pcnt > 0) {
+            var price = fen(w.querySelector('#f-packprice').value);
+            mm.packs.push({ id: uid(), name: pname, total: pcnt, left: pcnt, price: price, createdAt: Date.now() });
+            if (price > 0) {
+              addRecord({
+                kind:'packbuy', ts: Date.now(), memberId:mm.id, memberName:mm.name,
+                amount: price, listAmount: price, method:'现金',
+                note:'购次卡 '+pname+' '+pcnt+'次', source:'manual'
+              });
+              logAction('packbuy', {
+                memberId: mm.id, memberName: mm.name,
+                delta: price, note: '购 ' + pname + ' ' + pcnt + ' 次'
+              });
+            }
+          }
+          logAction('memberadd', {
+            memberId: mm.id, memberName: mm.name,
+            note: '卡号 ' + code + (mm.packs.length ? ' · 次卡 ' + mm.packs[0].name : '')
+          });
+          toast('会员已创建');
+        } else {
+          m.name = name; m.phone = phone; m.code = code;
+          m.discount = discount; m.note = note;
+          logAction('memberedit', { memberId: m.id, memberName: m.name, note: '修改资料/备注' });
+          toast('已保存');
+        }
+        save(); close(); render();
+      };
+    }
+  });
+}
+
+function memberDetail(m){
+  var recs = DB.records.filter(function(r){ return r.memberId === m.id; })
+                       .sort(function(a,b){ return b.ts - a.ts; }).slice(0,6);
+
+  var packsHTML = (m.packs && m.packs.length) ? m.packs.map(function(p){
+    return '<div class="row">'
+      + '<div class="grow"><div class="nm">'+esc(p.name)+'</div>'
+      +   '<div class="mt">剩余 '+p.left+' / '+p.total+' 次'
+      +   (packUnit(p) > 0 ? ' · 单次折算 ¥'+yuan(packUnit(p)) : '')+'</div></div>'
+      + '<button class="btn sm" data-act="pack-use" data-id="'+m.id+'" data-pack="'+p.id+'"'
+      + (p.left>0?'':' disabled')+'>核销 1 次</button></div>';
+  }).join('') : '<div class="empty" style="padding:10px">没有次卡</div>';
+
+  openSheet({
+    title: m.name,
+    body:
+      '<div class="grid2" style="margin-bottom:14px">'
+    +   '<div class="stat"><b>¥'+yuan(m.balance||0)+'</b><span>储值余额</span></div>'
+    +   '<div class="stat"><b>'+packLeft(m)+'</b><span>次卡剩余</span></div>'
+    + '</div>'
+    + '<div class="tips" style="margin-bottom:10px">'+esc(m.phone||'无手机号')+' · 卡号 '+esc(m.code||'-')
+    + ' · '+esc(discText(m.discount))+'</div>'
+    + (m.note
+        ? '<div class="tips" style="margin-bottom:14px;white-space:pre-wrap;background:var(--accent-soft);'
+          + 'padding:10px;border-radius:10px;color:var(--ink)">'+esc(m.note)+'</div>'
+        : '')
+    + '<div class="sec-title">次卡</div>'+packsHTML
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn" data-act="recharge" data-id="'+m.id+'">充值</button>'
+    +   '<button class="btn primary" data-act="consume" data-id="'+m.id+'">记消费</button>'
+    + '</div>'
+    + '<div class="btnrow" style="margin-top:10px">'
+    +   '<button class="btn ghost" data-act="edit-member" data-id="'+m.id+'">编辑资料</button>'
+    +   '<button class="btn danger" data-act="del-member" data-id="'+m.id+'">删除会员</button>'
+    + '</div>'
+    + '<div class="sec-title" style="margin-top:18px">最近记录</div>'
+    + (recs.length ? recs.map(recRowHTML).join('') : '<div class="empty" style="padding:12px">暂无</div>')
+  });
+}
+
+/* =========================================================
+   7) 充值 / 消费
+   ========================================================= */
+function rechargeSheet(m){
+  openSheet({
+    title:'储值充值 · ' + m.name,
+    body:
+      '<label class="field"><span>实收金额（元）</span><input class="input" id="r-amount" inputmode="decimal" placeholder="0.00"></label>'
+    + '<label class="field"><span>到账金额（元，含赠送；留空=同实收）</span><input class="input" id="r-credit" inputmode="decimal" placeholder=""></label>'
+    + '<div class="field"><span>收款方式</span><div class="chips" id="r-methods">'
+    +   ['现金','微信','支付宝','银行卡'].map(function(x,i){
+          return '<button class="chip'+(i===0?' on':'')+'" data-m="'+x+'">'+x+'</button>'; }).join('')
+    + '</div></div>'
+    + '<label class="field"><span>备注</span><input class="input" id="r-note" placeholder="如 充值1000送100"></label>'
+    + '<div class="btnrow"><button class="btn ghost" data-cancel>取消</button>'
+    + '<button class="btn primary" data-save>确认充值</button></div>',
+
+    onMount:function(w,close){
+      $('[data-cancel]',w).onclick = close;
+      $('[data-save]',w).onclick = function(){
+        var amt = fen(w.querySelector('#r-amount').value);
+        if (amt <= 0) { toast('请填写实收金额'); return; }
+        var creditRaw = w.querySelector('#r-credit').value.trim();
+        var credit = creditRaw ? fen(creditRaw) : amt;
+        var method = chipValue(w, '#r-methods .chip.on') || '现金';
+        var note = w.querySelector('#r-note').value.trim() || '充值';
+
+        var balBefore = m.balance || 0;
+        m.balance = balBefore + credit;
+        addRecord({
+          kind:'recharge', memberId:m.id, memberName:m.name,
+          amount: amt, listAmount: credit, method: method,
+          note: note + (credit !== amt ? '（到账 ¥'+yuan(credit)+'）' : ''),
+          source:'manual'
+        });
+        logAction('recharge', {
+          memberId: m.id, memberName: m.name,
+          delta: credit, before: balBefore, after: m.balance,
+          note: note + (credit !== amt ? '（实收 ¥'+yuan(amt)+'）' : '')
+        });
+        toast('已充值 ¥'+yuan(amt));
+        close(); render();
+      };
+    }
+  });
+}
+
+function consumeSheet(o){
+  o = o || {};
+  var members = DB.members.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+  var methodList = ['现金','微信','支付宝','储值卡','次卡','团购券'];
+  var preset = o.method || '现金';
+
+  openSheet({
+    title:'记一笔消费',
+    body:
+      '<label class="field"><span>会员（散客可不选）</span><select class="input" id="c-member">'
+    +   '<option value="">散客 / 不关联</option>'
+    +   members.map(function(m){
+          return '<option value="'+m.id+'"'+(o.memberId===m.id?' selected':'')+'>'
+            + esc(m.name) + (m.phone?' · '+esc(m.phone):'') + '</option>'; }).join('')
+    + '</select></label>'
+    + '<div class="grid2">'
+    +   '<label class="field"><span>原价（元）</span><input class="input" id="c-list" inputmode="decimal" placeholder="0.00" value="'+(o.listAmount?yuan(o.listAmount):'')+'"></label>'
+    +   '<label class="field"><span>实收（元）</span><input class="input" id="c-amount" inputmode="decimal" placeholder="0.00" value="'+(o.amount!=null?yuan(o.amount):'')+'"></label>'
+    + '</div>'
+    + '<div class="field"><span>支付方式</span><div class="chips" id="c-methods">'
+    +   methodList.map(function(x){
+          return '<button class="chip'+(x===preset?' on':'')+'" data-m="'+x+'">'+x+'</button>'; }).join('')
+    + '</div></div>'
+    + '<div class="field" id="c-packwrap" hidden><span>核销哪张次卡</span><select class="input" id="c-pack"></select></div>'
+    + '<div class="tips" id="c-hint" style="margin-bottom:10px"></div>'
+    + '<label class="field"><span>消费时间（可改，补录历史账用）</span>'
+    +   '<input class="input" id="c-time" value="'+fmtDT(o.ts || Date.now())+'"'
+    +   ' placeholder="2026-11-19 16:40"></label>'
+    + '<div class="field"><span>常用项目（点一下加进备注）</span><div class="chips" id="c-proj">'
+    +   (DB.settings.projects || []).map(function(p){
+          return '<button class="chip" data-proj="'+esc(p)+'">'+esc(p)+'</button>'; }).join('')
+    + '</div></div>'
+    + '<label class="field"><span>服务项目 / 备注（扣储值时建议写清做了什么）</span>'
+    + '<textarea class="input ta2" id="c-note" placeholder="如：剪发+洗头 / 染发 380">'+esc(o.note||'')+'</textarea></label>'
+    + '<div class="btnrow"><button class="btn ghost" data-cancel>取消</button>'
+    + '<button class="btn primary" data-save>入账</button></div>',
+
+    onMount:function(w,close){
+      var selM   = w.querySelector('#c-member');
+      var inpL   = w.querySelector('#c-list');
+      var inpA   = w.querySelector('#c-amount');
+      var wrapP  = w.querySelector('#c-packwrap');
+      var selP   = w.querySelector('#c-pack');
+      var hint   = w.querySelector('#c-hint');
+
+      var packPreset = o.packId || '';
+
+      function curMember(){ return selM.value ? getMember(selM.value) : null; }
+
+      function refresh(){
+        var m = curMember();
+        var method = chipValue(w, '#c-methods .chip.on');
+        /* 折扣自动算实收 */
+        if (m && m.discount && m.discount < 1 && inpL.value.trim()) {
+          inpA.value = yuan(Math.round(fen(inpL.value) * m.discount));
+        }
+        /* 次卡下拉 */
+        if (method === '次卡') {
+          wrapP.hidden = false;
+          var packs = (m && m.packs) ? m.packs.filter(function(p){ return p.left > 0; }) : [];
+          selP.innerHTML = packs.length
+            ? packs.map(function(p){ return '<option value="'+p.id+'">'+esc(p.name)+'（剩 '+p.left+' 次）</option>'; }).join('')
+            : '<option value="">没有可用次卡</option>';
+          if (!inpA.value.trim()) inpA.value = '0.00';
+          if (packPreset) { selP.value = packPreset; packPreset = ''; }
+        } else {
+          wrapP.hidden = true;
+        }
+        /* 提示 */
+        var t = '';
+        if (method === '储值卡') {
+          if (!m) t = '储值扣款需要先选择会员';
+          else t = '当前余额 ¥'+yuan(m.balance||0)+'，扣款后剩 ¥'+yuan((m.balance||0) - fen(inpA.value))+'';
+        }
+        if (method === '次卡' && m) {
+          t = '将从所选次卡扣 1 次' + (DB.settings.packValue
+            ? '，按单次折算价计入消费额'
+            : '，金额记 0（钱算在购卡当天）');
+        }
+        if (method === '团购券') {
+          t = '团购核销：计 ¥' + yuan(fen(inpA.value)) + ' 到消费额，不计现金（钱在团购时已付）';
+        }
+        hint.textContent = t;
+      }
+
+      /* 常用项目 → 追加到备注 */
+      $$('#c-proj .chip', w).forEach(function(c){
+        c.addEventListener('click', function(){
+          var ta = w.querySelector('#c-note');
+          var v = c.getAttribute('data-proj');
+          ta.value = (ta.value ? ta.value.replace(/\s+$/,'') + ' ' : '') + v;
+        });
+      });
+
+      selM.onchange = refresh;
+      inpL.oninput  = refresh;
+      inpA.oninput  = refresh;
+      $$('#c-methods .chip', w).forEach(function(c){ c.addEventListener('click', function(){ setTimeout(refresh,0); }); });
+
+      $('[data-cancel]',w).onclick = close;
+      $('[data-save]',w).onclick = function(){
+        var m = curMember();
+        var method = chipValue(w, '#c-methods .chip.on') || '现金';
+        var listFen = fen(inpL.value);
+        var amtFen  = fen(inpA.value);
+        var balBefore = m ? (m.balance || 0) : 0;
+
+        if (method === '储值卡') {
+          if (!m) { toast('请先选择会员'); return; }
+          if (amtFen <= 0) { toast('请填写实收金额'); return; }
+          if ((m.balance||0) < amtFen) { toast('余额不足，还剩 ¥'+yuan(m.balance||0)); return; }
+          m.balance -= amtFen;
+        }
+        var packId = null, packName = '', pkBeforeCnt = null;
+        if (method === '次卡') {
+          if (!m) { toast('次卡核销需要选择会员'); return; }
+          packId = selP.value;
+          var pk = (m.packs||[]).filter(function(p){ return p.id === packId; })[0];
+          if (!pk || pk.left <= 0) { toast('没有可用次卡'); return; }
+          pkBeforeCnt = pk.left;
+          pk.left -= 1; packName = pk.name;
+          if (amtFen <= 0 && DB.settings.packValue) {
+            amtFen = packUnit(pk);        // 按单次折算价计入消费额
+          }
+        }
+        if (amtFen <= 0 && method !== '次卡') { toast('金额需大于 0'); return; }
+
+        var noteText = (w.querySelector('#c-note').value.trim()
+          || (packName ? '核销 ' + packName : '')) + (o.tag ? ' [' + o.tag + ']' : '');
+
+        var timeStr = (w.querySelector('#c-time').value || '').trim();
+        if (timeStr && !/\d{4}\s*[-/.]\s*\d{1,2}\s*[-/.]\s*\d{1,2}/.test(timeStr)) {
+          toast('时间格式请写成 2026-11-19 16:40');
+          return;
+        }
+        var readTime = parseDT(timeStr) || Date.now();
+
+        addRecord({
+          kind:'consume', ts: readTime,
+          memberId: m ? m.id : null,
+          memberName: m ? m.name : '',
+          amount: amtFen, listAmount: listFen || amtFen,
+          method: method,
+          note: noteText,
+          items: o.items || [],
+          packId: packId || null,
+          source: o.source || 'manual'
+        });
+
+        if (m && method === '储值卡') {
+          logAction('pay', {
+            memberId: m.id, memberName: m.name,
+            delta: -amtFen, before: balBefore, after: m.balance,
+            note: noteText
+          });
+        } else if (m && method === '次卡') {
+          logAction('packuse', {
+            memberId: m.id, memberName: m.name, unit: 'count',
+            delta: -1, before: pkBeforeCnt,
+            after: (pkBeforeCnt === null ? null : (pkBeforeCnt - 1)),
+            note: noteText
+          });
+        }
+        toast('已入账 ¥'+yuan(amtFen));
+        close(); render();
+      };
+      refresh();
+    }
+  });
+}
+
+/* =========================================================
+   8) 账单解析
+   ========================================================= */
+var KEY_SUM = /(合计|总计|小计|应收|实收|实付|应付|金额|优惠|折扣|抹零|找零|余额|积分|付款|支付|到账|退款|单号|编号|流水号|时间|日期|电话|手机|卡号|尾号|笔数|数量)/;
+
+function parseBill(raw){
+  var text = String(raw||'').replace(/\r/g,'').replace(/\u00a0/g,' ');
+  var out = { amount:0, ts:Date.now(), merchant:'', method:'', orderNo:'', items:[], tips:[], orderId:'', itemName:'', code:'', verifyTime:'', verifier:'', shopId:'', platform:'', account:'' };
+
+  /* --- 金额 --- */
+  var amtPats = [
+    /(?:实付金额|实收金额|付款金额|支付金额|交易金额|消费金额|订单金额|合计金额|应收金额|实付|实收|应收|合计|总计|小计|金额)[^0-9¥￥\-]{0,8}[¥￥]?[ ]?([0-9]+(?:\.[0-9]{1,2})?)/,
+    /[¥￥][ ]?([0-9]+(?:\.[0-9]{1,2})?)/,
+    /([0-9]+(?:\.[0-9]{1,2})?)[ ]?元/
+  ];
+  for (var i=0;i<amtPats.length;i++){
+    var m = text.match(amtPats[i]);
+    if (m) { out.amount = fen(m[1]); break; }
+  }
+  if (!out.amount) out.tips.push('没有识别到金额，请手动填写。');
+
+  /* --- 时间 --- */
+  var t1 = text.match(/(20\d{2})[-/.年](\d{1,2})[-/.月](\d{1,2})日?[^\d]{0,3}(\d{1,2})[:：](\d{2})(?:[:：](\d{2}))?/);
+  if (t1) {
+    out.ts = new Date(+t1[1], +t1[2]-1, +t1[3], +t1[4], +t1[5], +(t1[6]||0)).getTime();
+  } else {
+    var t2 = text.match(/(\d{1,2})[月\-/](\d{1,2})日?[^\d]{0,3}(\d{1,2})[:：](\d{2})/);
+    if (t2) {
+      var y = new Date().getFullYear();
+      out.ts = new Date(y, +t2[1]-1, +t2[2], +t2[3], +t2[4], 0).getTime();
+      out.tips.push('账单里没写年份，已按 '+y+' 年处理。');
+    } else {
+      out.tips.push('没识别到时间，已用当前时间。');
+    }
+  }
+
+  /* --- 商家 --- */
+  var mer = text.match(/(?:商户全称|商户名称|商户简称|商户|收款方全称|收款方|收款单位|收款人|商家名称|商家|门店名称|门店)[：:\s]*([^\n]{2,40})/);
+  if (mer) {
+    var s = mer[1].replace(/[：:]+$/,'').trim();
+    s = s.split(/\s{2,}/)[0].replace(/^备注[：:]?/,'').trim();
+    out.merchant = s.slice(0, 30);
+  }
+
+  /* --- 支付方式 --- */
+  /* 团购核销：必须带「已核销」标记才判定为团购券，避免误抓普通订单 */
+  if (/已核销/.test(text)) out.method = '团购券';
+  else if (/微信/.test(text)) out.method = '微信';
+  else if (/支付宝/.test(text)) out.method = '支付宝';
+  else if (/银行卡|储蓄卡|信用卡|尾号/.test(text)) out.method = '银行卡';
+
+  /* --- 团购字段（与原生解析一致） --- */
+  out.orderId = (text.match(/(?:订单号|订单编号|订单ID)[：:\s]*([0-9]{6,30})/) || [])[1] || '';
+  out.itemName = (text.match(/(?:商品名称|商品|商品名)[：:\s]*([^\n]{2,40})/) || [])[1] || '';
+
+  /* 核销券码：抖音 15 位连续；美团带空格（0107 0066 0238 8）→ 去空格 10~20 位 */
+  out.code = '';
+  var cmt = text.match(/(?:核销券码|核销券|券码|核销码|券编号|券号)[：:\s]*([0-9][0-9\s]{8,26})/);
+  if (cmt) {
+    var rawCode = cmt[1].replace(/\s+/g, '');
+    if (rawCode.length >= 10 && rawCode.length <= 20) out.code = rawCode;
+  }
+  if (!out.code) {
+    var c2 = text.match(/\b([0-9]{15})\b/);
+    if (c2) out.code = c2[1];
+  }
+
+  /* 核销时间：抖音「核销时间」/ 美团「验证时间」→ 统一 yyyy/MM/dd HH:mm:ss */
+  out.verifyTime = '';
+  var vt = text.match(/(?:核销时间|验证时间)[：:\s]*(20\d{2})[-\/年.](\d{1,2})[-\/月.](\d{1,2})日?[^0-9]{0,3}(\d{1,2})[:：](\d{1,2})(?:[:：](\d{1,2}))?/);
+  if (vt) {
+    var p2 = function(n){ n = parseInt(n,10)||0; return n < 10 ? ('0'+n) : (''+n); };
+    out.verifyTime = vt[1] + '/' + p2(vt[2]) + '/' + p2(vt[3]) + ' '
+      + p2(vt[4]) + ':' + p2(vt[5]) + ':' + (vt[6] ? p2(vt[6]) : '00');
+  }
+
+  /* 核销人：只有「商户」「管理员」两种 */
+  var verifier = '';
+  var vf = text.match(/(?:核销人)[：:\s]*([^\n]{1,24})/);
+  if (vf) {
+    var v = vf[1].trim();
+    if (v.indexOf('商户') === 0) {
+      verifier = '商户';
+      var shopM = v.match(/商户\s*([0-9]{15,30})/);
+      if (shopM && !out.shopId) out.shopId = shopM[1];
+    } else if (v.indexOf('管理员') === 0) {
+      verifier = '管理员';
+    }
+  }
+  out.verifier = verifier || '商户';
+
+  /* 平台：美团（验券）/ 抖音（核销） */
+  var isMt = text.indexOf('验券') >= 0 || text.indexOf('券类型') >= 0 || text.indexOf('消费明细') >= 0;
+  var isDy = text.indexOf('核销券码') >= 0 || text.indexOf('核销人') >= 0 || text.indexOf('核销明细') >= 0;
+  var isWx = text.indexOf('收款助手') >= 0 || (text.indexOf('收款') >= 0 && (text.indexOf('零钱') >= 0 || text.indexOf('存入') >= 0));
+  out.platform = isWx ? '微信'
+    : (isMt && !isDy) ? '美团' : (isDy && !isMt) ? '抖音' : isMt ? '美团' : isDy ? '抖音' : '';
+
+  /* 美团验券账号 */
+  var accM = text.match(/(?:验券账号)[：:\s]*([^\n]{2,40})/);
+  out.account = accM ? accM[1].trim() : '';
+
+  out.shopId = out.shopId || (text.match(/(?:商户编号|商户号|商户id|商户ID|门店编号)[：:\s]*([0-9]{15,30})/) || [])[1] || '';
+
+
+  /* --- 单号 --- */
+  var no = text.match(/(?:交易单号|订单号|商户单号|流水号)[：:\s]*([A-Za-z0-9]{6,40})/);
+  if (no) out.orderNo = no[1];
+
+  /* --- 项目行 --- */
+  var lines = text.split('\n');
+  for (var k=0;k<lines.length && out.items.length<10;k++){
+    var line = lines[k].trim().replace(/^[-•·*]\s*/,'');
+    if (!line || line.length > 40) continue;
+    if (KEY_SUM.test(line)) continue;
+    var im = line.match(/^(.{1,24}?)[\s:：]{1,4}[¥￥]?[ ]?([0-9]+(?:\.[0-9]{1,2})?)[ ]?元?$/);
+    if (!im) continue;
+    var nm = im[1].replace(/[¥￥:：\s]+$/,'').trim();
+    var pv = fen(im[2]);
+    if (!nm || /^[0-9.]+$/.test(nm) || pv <= 0 || pv > 10000000) continue;
+    out.items.push({ name: nm, price: pv });
+  }
+
+  return out;
+}
+
+function renderScanResult(r){
+  var members = DB.members.slice();
+  var box = $('#scanResult');
+  var methodList = ['微信','支付宝','现金','储值卡','次卡','团购券','银行卡'];
+
+  box.innerHTML =
+    '<div class="card">'
+  +   '<div class="sec-title">识别结果（可修改）</div>'
+  +   '<div class="grid2">'
+  +     '<label class="field"><span>金额（元）</span><input class="input" id="s-amount" inputmode="decimal" value="'+(r.amount?yuan(r.amount):'')+'" placeholder="0.00"></label>'
+  +     '<label class="field"><span>时间</span><input class="input" id="s-time" value="'+fmtDT(r.ts)+'"></label>'
+  +   '</div>'
+  +   '<label class="field"><span>商家 / 备注</span><input class="input" id="s-merchant" value="'+esc(r.merchant)+'" placeholder="如 XX造型工作室"></label>'
+  +   '<div class="field"><span>支付方式</span><div class="chips" id="s-methods">'
+  +     methodList.map(function(x){
+          return '<button class="chip'+(x===(r.method||'微信')?' on':'')+'" data-m="'+x+'">'+x+'</button>'; }).join('')
+  +   '</div></div>'
+  +   '<label class="field"><span>关联会员</span><select class="input" id="s-member">'
+  +     '<option value="">散客 / 不关联</option>'
+  +     members.map(function(m){
+          return '<option value="'+m.id+'">'+esc(m.name)+(m.phone?' · '+esc(m.phone):'')+'</option>'; }).join('')
+  +   '</select></label>'
+  +   (r.items.length
+        ? '<div class="field"><span>识别到的项目</span><div class="tips">'+r.items.map(function(it){
+            return esc(it.name)+' ¥'+yuan(it.price); }).join(' · ')+'</div></div>'
+        : '')
+  +   (r.tips.length ? '<div class="hint">'+r.tips.map(esc).join('<br>')+'</div>' : '')
+  +   '<div class="btnrow" style="margin-top:12px">'
+  +     '<button class="btn primary" data-act="save-scan">保存并入账</button>'
+  +     '<button class="btn ghost" data-act="parse">重新解析</button>'
+  +   '</div>'
+  + '</div>';
+
+  box.setAttribute('data-parsed', '1');
+  box._parsed = r;
+}
+
+function parseDT(s){
+  var m = String(s||'').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})\D*(\d{1,2}):(\d{2})/);
+  if (!m) {
+    var d = String(s||'').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})/);
+    if (d) return new Date(+d[1], +d[2]-1, +d[3], 12, 0, 0).getTime();
+    return Date.now();
+  }
+  return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], 0).getTime();
+}
+
+/* 解析含秒的日期时间，如 2026-11-22 12:08:30 */
+function parseDTFull(s){
+  var m = String(s||'').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})\D*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) {
+    var d = String(s||'').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})/);
+    if (d) return new Date(+d[1], +d[2]-1, +d[3], 12, 0, 0).getTime();
+    return NaN;
+  }
+  return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], m[6] ? +m[6] : 0).getTime();
+}
+
+function saveScan(){
+  var box = $('#scanResult');
+  if (!box.getAttribute('data-parsed')) {
+    toast('请先点「解析」');
+    return;
+  }
+  var amount = fen($('#s-amount').value);
+  if (amount <= 0) { toast('金额需大于 0'); return; }
+  var ts     = parseDT($('#s-time').value);
+  var note   = $('#s-merchant').value.trim();
+  var method = chipValue(box, '#s-methods .chip.on') || '微信';
+  var memberId = $('#s-member').value;
+
+  var text = $('#billText').value;
+
+  if (method === '储值卡' || method === '次卡') {
+    if (!memberId) { toast('储值/次卡需要先选会员'); return; }
+    consumeSheet({
+      memberId: memberId, amount: amount, listAmount: amount,
+      method: method, note: note, source:'parse', tag:'账单识别', ts: ts
+    });
+    return;
+  }
+
+  addRecord({
+    kind:'consume', ts: ts,
+    memberId: memberId || null,
+    memberName: memberId ? (getMember(memberId)||{}).name : '',
+    amount: amount, listAmount: amount,
+    method: method,
+    note: note,
+    items: [],
+    source: 'parse',
+    // 团购字段（若识别到）
+    orderId:   (box._parsed && box._parsed.orderId)   || '',
+    itemName:  (box._parsed && box._parsed.itemName)  || '',
+    code:      (box._parsed && box._parsed.code)      || '',
+    verifyTime:(box._parsed && box._parsed.verifyTime)|| '',
+    verifier:  (box._parsed && box._parsed.verifier)  || '',
+    shopId:    (box._parsed && box._parsed.shopId)    || '',
+    platform:  (box._parsed && box._parsed.platform)  || '',
+    account:   (box._parsed && box._parsed.account)   || '',
+    rawText: text.slice(0, 500)
+  });
+  toast('已入账 ¥'+yuan(amount));
+  $('#billText').value = '';
+  $('#scanResult').innerHTML = '';
+  go('home');
+}
+
+/* =========================================================
+   9) 流水详情 / 删除（含回滚）
+   ========================================================= */
+function recordDetail(r){
+  openSheet({
+    title: kindText(r.kind),
+    body:
+      '<div class="tips" style="font-size:14px;line-height:2">'
+    +   '金额：<b>¥'+yuan(r.amount)+'</b><br>'
+    +   '时间：'+fmtDT(r.ts)+'<br>'
+    +   '会员：'+esc(r.memberName || '散客')+'<br>'
+    +   '方式：'+esc(r.method || '-')+'<br>'
+    +   '备注：'+esc(r.note || '-')+'<br>'
+    +   '来源：'+(r.source === 'parse' ? '账单识别' : (r.source === 'overlay' ? '悬浮窗捕获' : '手动录入'))
+    + (r.platform  ? '<br>平台：'+esc(r.platform) : '')
+    + (r.orderId   ? '<br>订单号：'+esc(r.orderId) : '')
+    + (r.itemName  ? '<br>商品：'+esc(r.itemName) : '')
+    + (r.code      ? '<br>核销券码：'+esc(r.code) : '')
+    + (r.verifyTime? '<br>核销时间：'+esc(r.verifyTime) : '')
+    + (r.verifier  ? '<br>核销人：'+esc(r.verifier) : '')
+    + (r.account   ? '<br>验券账号：'+esc(r.account) : '')
+    + (r.shopId    ? '<br>商户编号：'+esc(r.shopId) : '')
+    + '</div>'
+    + (r.kind === 'consume' && !r.memberId
+        ? '<div class="hint" style="margin-bottom:10px">这笔是散客记录，可关联到会员名下（只做归属，不动余额/次数）。</div>'
+        : '')
+    + '<div class="btnrow" style="margin-top:6px">'
+    +   (r.kind === 'consume'
+          ? '<button class="btn" data-link>'+(r.memberId ? '更换会员' : '关联会员')+'</button>'
+          : '')
+    +   '<button class="btn" data-time>改时间</button>'
+    + '</div>'
+    + '<div class="btnrow" style="margin-top:8px">'
+    +   '<button class="btn ghost" data-cancel>关闭</button>'
+    +   '<button class="btn danger" data-del>删除此笔</button></div>'
+    + (r.kind === 'consume' && r.memberId
+        ? '<button class="btn ghost block" style="margin-top:10px" data-unlink>解除关联（变回散客）</button>'
+        : ''),
+    onMount:function(w,close){
+      $('[data-cancel]',w).onclick = close;
+      if ($('[data-time]', w)) {
+        $('[data-time]', w).onclick = function(){
+          close();
+          changeTimeSheet(r);
+        };
+      }
+      if ($('[data-link]', w)) {
+        $('[data-link]', w).onclick = function(){
+          close();
+          pickMember(function(m){ linkRecord(r, m); }, r.memberId ? '更换关联会员' : '关联到会员');
+        };
+      }
+      if ($('[data-unlink]', w)) {
+        $('[data-unlink]', w).onclick = function(){
+          r.memberId = null;
+          r.memberName = '';
+          save(); close(); render(); toast('已解除关联，变回散客');
+        };
+      }
+      $('[data-del]',w).onclick = function(){
+        close();
+        var warn = (r.kind === 'consume' && (r.method === '储值卡' || r.method === '次卡'))
+          ? '余额/次数会一并退回。' : '';
+        secureConfirm('删除后不可恢复。' + warn, function(){
+          var m = r.memberId ? getMember(r.memberId) : null;
+          var beforeBal = m ? (m.balance || 0) : 0;
+          var beforeCnt = m ? packLeft(m) : 0;
+
+          if (m && r.kind === 'consume') {
+            if (r.method === '储值卡') m.balance = (m.balance||0) + r.amount;
+            if (r.method === '次卡' && m.packs) {
+              var pk = r.packId
+                ? m.packs.filter(function(p){ return p.id === r.packId; })[0]
+                : null;
+              if (!pk) pk = m.packs.filter(function(p){ return p.left < p.total; })[0];
+              if (pk && pk.left < pk.total) pk.left += 1;
+            }
+          }
+          if (m && r.kind === 'recharge') {
+            m.balance = Math.max(0, (m.balance||0) - (r.listAmount || r.amount));
+          }
+          DB.records = DB.records.filter(function(x){ return x.id !== r.id; });
+
+          // 删除记录时，同时清除该券码的去重标记，允许之后重新识别
+          if (r.code) {
+            nativeSafe(function(){ if (NATIVE && NATIVE.forgetCode) NATIVE.forgetCode(r.code); }, null);
+          }
+          save();
+
+          if (m) {
+            var isCount = (r.method === '次卡');
+            logAction('rollback', {
+              memberId: m.id, memberName: m.name,
+              unit: isCount ? 'count' : 'money',
+              delta: isCount ? (packLeft(m) - beforeCnt) : ((m.balance||0) - beforeBal),
+              before: isCount ? beforeCnt : beforeBal,
+              after: isCount ? packLeft(m) : (m.balance||0),
+              note: '删除记录：' + (r.note || kindText(r.kind))
+            });
+          }
+          render(); toast('已删除');
+        });
+      };
+    }
+  });
+}
+
+/* 事后修改某一笔的时间（补录 / 记错日期） */
+function changeTimeSheet(r){
+  openSheet({
+    title:'修改消费时间',
+    body:
+      '<label class="field"><span>时间（YYYY-MM-DD HH:mm）</span>'
+    +   '<input class="input" id="time-in" value="'+fmtDT(r.ts)+'"></label>'
+    + '<div class="hint">改完后这笔会重新归入对应日期的统计。</div>'
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn ghost" data-cancel>取消</button>'
+    +   '<button class="btn primary" data-ok>保存</button></div>',
+    onMount:function(w, close){
+      w.querySelector('[data-cancel]').onclick = close;
+      w.querySelector('[data-ok]').onclick = function(){
+        var t = parseDT(w.querySelector('#time-in').value);
+        if (!t || isNaN(t)) { toast('时间格式不对'); return; }
+        var before = r.ts;
+        r.ts = t;
+        save();
+        logAction('timeedit', {
+          memberId: r.memberId, memberName: r.memberName,
+          note: fmtDT(before) + ' → ' + fmtDT(t) + '（' + (r.note || kindText(r.kind)) + '）'
+        });
+        close(); render();
+        toast('已改为 ' + fmtDT(t));
+      };
+    }
+  });
+}
+
+/* 批量删除流水：二次确认 + 指纹验证一次，然后统一删除并回滚 */
+function batchDeleteRecords(ids){
+  var target = DB.records.filter(function(r){ return ids.indexOf(r.id) >= 0; });
+  if (!target.length) return;
+
+  // 需要回滚的会员余额/次数
+  var rollbackInfo = [];
+  target.forEach(function(r){
+    var m = r.memberId ? getMember(r.memberId) : null;
+    if (!m) return;
+    if (r.kind === 'consume') {
+      if (r.method === '储值卡') {
+        rollbackInfo.push(m.name + ' 余额 +¥' + yuan(r.amount));
+      } else if (r.method === '次卡') {
+        rollbackInfo.push(m.name + ' 次卡 +1 次');
+      }
+    } else if (r.kind === 'recharge') {
+      rollbackInfo.push(m.name + ' 余额 -¥' + yuan(r.listAmount || r.amount));
+    }
+  });
+
+  var totalAmt = target.reduce(function(a, x){ return a + (x.amount||0); }, 0);
+
+  secureConfirm('删除所选 ' + target.length + ' 笔（合计 ¥' + yuan(totalAmt) + '）？'
+    + (rollbackInfo.length ? '<br>将回滚：' + rollbackInfo.join('；') : ''),
+    function(){
+      // 执行回滚
+      target.forEach(function(r){
+        var m = r.memberId ? getMember(r.memberId) : null;
+        if (!m) return;
+        if (r.kind === 'consume') {
+          if (r.method === '储值卡') m.balance = (m.balance||0) + r.amount;
+          else if (r.method === '次卡' && m.packs) {
+            var pk = r.packId
+              ? m.packs.filter(function(p){ return p.id === r.packId; })[0] : null;
+            if (!pk) pk = m.packs.filter(function(p){ return p.left < p.total; })[0];
+            if (pk && pk.left < pk.total) pk.left += 1;
+          }
+        } else if (r.kind === 'recharge') {
+          m.balance = Math.max(0, (m.balance||0) - (r.listAmount || r.amount));
+        }
+      });
+      DB.records = DB.records.filter(function(x){ return ids.indexOf(x.id) < 0; });
+      // 批量删除：清除各券码去重标记，允许重新识别
+      target.forEach(function(r){ if (r.code) {
+        nativeSafe(function(){ if (NATIVE && NATIVE.forgetCode) NATIVE.forgetCode(r.code); }, null);
+      } });
+      save();
+      logAction('wipe', {
+        note: '批量删除 ' + target.length + ' 笔流水（合计 ¥' + yuan(totalAmt) + '）'
+      });
+      recBatchMode = false;
+      recBatchSel = {};
+      render();
+      toast('已删除 ' + target.length + ' 笔');
+    });
+}
+
+/* =========================================================
+   9.5) 关联会员（散客消费 → 挂到会员名下）
+   ========================================================= */
+function pickMember(onPick, title){
+  var all = DB.members.slice().sort(function(a,b){
+    return (a.name||'').localeCompare(b.name||'');
+  });
+
+  function rows(q){
+    q = (q||'').trim().toLowerCase();
+    var list = all.filter(function(m){
+      if (!q) return true;
+      return (m.name||'').toLowerCase().indexOf(q) >= 0
+          || (m.phone||'').indexOf(q) >= 0
+          || (m.code||'').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!list.length) return '<div class="empty">没有匹配的会员</div>';
+    return list.map(function(m){
+      return '<div class="row" data-pmid="'+m.id+'">'
+        + '<div class="ava">'+esc((m.name||'?').slice(0,1))+'</div>'
+        + '<div class="grow"><div class="nm">'+esc(m.name)+'</div>'
+        +   '<div class="mt">'+esc(m.phone || m.code || '')+' · '+esc(memberLine(m))+'</div></div>'
+        + '<div class="mt">选择 ›</div></div>';
+    }).join('');
+  }
+
+  openSheet({
+    title: title || '选择会员',
+    body:
+      '<input class="input" id="pm-q" placeholder="搜索姓名 / 手机 / 卡号" style="margin-bottom:10px">'
+    + '<div id="pm-list">'+rows('')+'</div>'
+    + '<div class="hint">只做归属关联，不会改动余额或次数。要扣储值、核销次卡请用「记消费」。</div>',
+    onMount:function(w, close){
+      var q = w.querySelector('#pm-q');
+      var box = w.querySelector('#pm-list');
+      q.addEventListener('input', function(){ box.innerHTML = rows(q.value); });
+      box.addEventListener('click', function(e){
+        var el = e.target.closest ? e.target.closest('[data-pmid]') : null;
+        if (!el) return;
+        var m = getMember(el.getAttribute('data-pmid'));
+        if (!m) return;
+        close();
+        onPick(m);
+      });
+    }
+  });
+}
+
+/**
+ * 关联入口：
+ * - 首次关联且会员有余额 → 先问「仅关联」还是「储值卡结算」
+ * - 已关联过的（更换会员）→ 只改归属；若原记录已扣过储值，先警告
+ */
+function linkRecord(r, m){
+  var isFirst = !r.memberId;
+
+  if (isFirst && (m.balance || 0) > 0) {
+    pickSettle(r, m);
+    return;
+  }
+
+  if (!isFirst && r.method === '储值卡') {
+    confirmBox('这笔已经从前一位会员（'+(r.memberName||'')+'）的余额扣过款，更换归属不会自动退还。确定更换吗？', function(){
+      r.memberId = m.id;
+      r.memberName = m.name;
+      save(); render();
+      toast('已更换为 ' + m.name);
+    }, '确定更换');
+    return;
+  }
+
+  applyLink(r, m, false);
+}
+
+/** 结算方式选择：仅关联 / 从储值余额扣款 */
+function pickSettle(r, m){
+  var bal = m.balance || 0;
+  var need = r.amount || 0;
+  var enough = bal >= need;
+  var after = bal - need;
+
+  openSheet({
+    title: '关联到 ' + m.name,
+    body:
+      '<div class="grid2" style="margin-bottom:14px">'
+    +   '<div class="stat"><b>¥'+yuan(need)+'</b><span>本笔实收</span></div>'
+    +   '<div class="stat"><b>¥'+yuan(bal)+'</b><span>会员余额</span></div>'
+    + '</div>'
+    + (enough
+        ? '<div class="tips">储值卡结算：余额扣 ¥'+yuan(need)+'，扣后剩 ¥'+yuan(after)+'。</div>'
+        : '<div class="tips" style="color:var(--red)">余额不足，还差 ¥'+yuan(need - bal)+'，只能选「仅关联」。</div>')
+    + (m.discount && m.discount < 1
+        ? '<div class="hint">该会员享 '+discText(m.discount)+'。这里按「本笔实收」扣款；若要按折扣价扣，请用「记消费」重记。</div>'
+        : '')
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn" data-only>仅关联</button>'
+    +   '<button class="btn primary" data-pay'+(enough ? '' : ' disabled')+'>储值卡结算</button>'
+    + '</div>'
+    + '<button class="btn ghost block" style="margin-top:10px" data-cancel2>取消</button>',
+    onMount:function(w, close){
+      w.querySelector('[data-only]').onclick = function(){
+        close();
+        applyLink(r, m, false);
+      };
+      w.querySelector('[data-pay]').onclick = function(){
+        if (!enough) { toast('余额不足'); return; }
+        close();
+        applyLink(r, m, true);
+      };
+      w.querySelector('[data-cancel2]').onclick = close;
+    }
+  });
+}
+
+/** 真正落地：pay=true 时扣余额并把支付方式改成储值卡 */
+function applyLink(r, m, pay){
+  r.memberId = m.id;
+  r.memberName = m.name;
+
+  if (pay) {
+    var balBefore = m.balance || 0;
+    m.balance = balBefore - r.amount;
+    r.method = '储值卡';
+    save();
+    logAction('pay', {
+      memberId: m.id, memberName: m.name,
+      delta: -r.amount, before: balBefore, after: m.balance,
+      note: (r.note || '账单关联结算')
+    });
+    render();
+    toast('已扣 ' + m.name + ' 余额 ¥'+yuan(r.amount)+'，剩 ¥'+yuan(m.balance));
+    return;
+  }
+
+  save();
+  var listFen = r.listAmount || 0;
+  if (m.discount && m.discount < 1 && listFen > 0) {
+    var should = Math.round(listFen * m.discount);
+    if (should !== r.amount) {
+      render();
+      toast('已关联到 ' + m.name);
+      confirmBox('「'+m.name+'」享'+discText(m.discount)+'：原价 ¥'+yuan(listFen)+' 应为 ¥'+yuan(should)
+        + '，当前实收 ¥'+yuan(r.amount)+'。要按折扣改金额吗？', function(){
+          r.amount = should;
+          save(); render();
+          toast('金额已改为 ¥'+yuan(should));
+        }, '改成 ¥'+yuan(should));
+      return;
+    }
+  }
+  render();
+  toast('已关联到 ' + m.name);
+}
+
+/* =========================================================
+   9.7) 审计日志：余额 / 次数每次变动都留痕
+   ========================================================= */
+var LOG_MAX = 800;
+
+var LOG_LABEL = {
+  recharge:   '充值',
+  pay:        '储值扣款',
+  packbuy:    '购卡',
+  packuse:    '次卡核销',
+  rollback:   '删除回滚',
+  memberadd:  '新建会员',
+  memberedit: '修改会员',
+  memberdel:  '删除会员',
+  timeedit:   '改时间',
+  wipe:       '清空数据',
+  unlock:     '解锁'
+};
+
+function logAction(type, o){
+  o = o || {};
+  try {
+    DB.logs.push({
+      id: uid(),
+      ts: o.ts || Date.now(),
+      type: type,
+      memberId: o.memberId || null,
+      memberName: o.memberName || '',
+      delta: (typeof o.delta === 'number') ? o.delta : null,
+      before: (typeof o.before === 'number') ? o.before : null,
+      after: (typeof o.after === 'number') ? o.after : null,
+      unit: o.unit || 'money',
+      note: o.note || '',
+      source: o.source || ''
+    });
+    while (DB.logs.length > LOG_MAX) DB.logs.shift();
+    save();
+  } catch (e) { }
+}
+
+var logFilterMember = '';
+
+function renderLogs(){
+  var box = $('#logList');
+  if (!box) return;
+  var list = DB.logs.slice().reverse();
+  if (logFilterMember) {
+    list = list.filter(function(e){ return e.memberId === logFilterMember; });
+  }
+  list = list.slice(0, 300);
+
+  if (!list.length) {
+    box.innerHTML = '<div class="empty">还没有日志。充值、扣款、核销、删除都会自动记录。</div>';
+    return;
+  }
+
+  var html = '', lastDay = '';
+  list.forEach(function(e){
+    var d = fmtDate(e.ts);
+    if (d !== lastDay) { lastDay = d; html += '<div class="daytag">'+d+'</div>'; }
+
+    var delta = '';
+    if (e.delta !== null) {
+      var sign = e.delta < 0 ? '-' : '+';
+      var abs = Math.abs(e.delta);
+      delta = (e.unit === 'count') ? (sign + abs + ' 次') : (sign + '¥' + yuan(abs));
+    }
+    var tail = [];
+    if (e.after !== null) {
+      tail.push('余 ' + (e.unit === 'count' ? (e.after + ' 次') : ('¥' + yuan(e.after))));
+    }
+    if (e.note) tail.push(e.note);
+
+    html += '<div class="row">'
+      + '<div class="grow"><div class="nm">' + esc(LOG_LABEL[e.type] || e.type)
+      +   (e.memberName ? ' · ' + esc(e.memberName) : '')
+      +   ' <span class="mt">' + fmtTime(e.ts) + '</span></div>'
+      +   '<div class="mt">' + esc(tail.join(' · ')) + '</div></div>'
+      + (delta ? '<div class="amt-r ' + (e.delta < 0 ? 'neg' : 'pos') + '">' + delta + '</div>' : '')
+      + '</div>';
+  });
+  box.innerHTML = html;
+}
+
+/* =========================================================
+   9.8) 解锁 / 验证：指纹优先（原生版），网页版降级为密码
+   ========================================================= */
+var sessionUnlocked = false;
+var authCallback = null;
+
+function lockMode(){ return DB.settings.lock || 'off'; }
+
+/* 环境诊断：把判断依据全部摆出来 */
+var BUILD_TAG = 'v1.2.0';
+
+function diagSheet(){
+  var lines = [];
+  lines.push('构建：' + BUILD_TAG);
+  lines.push('页面：' + String(location.href).slice(0, 110));
+  lines.push('window.Native：' + (typeof window.Native));
+  lines.push('NATIVE 变量：' + (typeof NATIVE));
+
+  if (window.Native) {
+    var ks = nativeSafe(function(){ return Object.keys(window.Native).join(','); }, '');
+    lines.push('桥方法：' + (ks || '(无法枚举，通常正常)'));
+    lines.push('桥版本：' + nativeSafe(function(){
+      return NATIVE.appVersion ? String(NATIVE.appVersion()) : '无 appVersion()';
+    }, '调用失败'));
+  }
+  lines.push('Java 打的原生标记：' + (window.__NATIVE_APP__ || '无（说明不是我们的 MainActivity）'));
+  lines.push('指纹接口：' + (hasNativeAuth() ? '有' : '无'));
+  lines.push('UA：' + navigator.userAgent.slice(0, 110));
+
+  openSheet({
+    title:'诊断信息',
+    body:
+      '<div class="tips" style="font-family:monospace;font-size:12px;line-height:1.9;word-break:break-all">'
+    + lines.map(function(l){ return esc(l); }).join('<br>')
+    + '</div>'
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn" data-copy-diag>复制</button>'
+    +   '<button class="btn ghost" data-close>关闭</button></div>',
+    onMount: function(w, close){
+      w.querySelector('[data-close]').onclick = close;
+      w.querySelector('[data-copy-diag]').onclick = function(){
+        var txt = lines.join('\n');
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+          toast('已复制');
+        } catch (e) { toast('复制失败，请截图'); }
+      };
+    }
+  });
+}
+
+/* 原生桥自诊断：桥在不在、什么版本、有没有指纹接口 */
+function nativeBridgeInfo(){
+  var has = !!(typeof NATIVE !== 'undefined' && NATIVE);
+  var ver = '';
+  var bio = false;
+  if (has) {
+    ver = nativeSafe(function(){
+      return NATIVE.appVersion ? String(NATIVE.appVersion()) : '';
+    }, '') || '';
+    bio = (typeof NATIVE.requestDeviceCredential === 'function');
+  }
+  return { has: has, ver: ver, bio: bio };
+}
+
+function hasNativeAuth(){
+  return nativeBridgeInfo().bio;
+}
+
+/* MainActivity 通过 evaluateJavascript 回调这个函数 */
+window.__hcAuthResult = function(passed){
+  var cb = authCallback;
+  authCallback = null;
+  if (passed) {
+    if (cb && cb.ok) cb.ok();
+    return;
+  }
+  toast('验证未通过');
+  /* 指纹失败/设备不支持时，若设过密码就退回密码验证 */
+  if (DB.settings.pin) {
+    askPinAuth(cb ? cb.ok : null, cb ? cb.cancel : null);
+    return;
+  }
+  if (cb && cb.cancel) cb.cancel();
+};
+
+function askPinAuth(onOk, onCancel, title){
+  openSheet({
+    title: title || '验证身份',
+    body:
+      '<div class="hint" style="margin-bottom:10px">输入 APP 密码</div>'
+    + '<input class="input" id="pin-in" type="password" inputmode="numeric" maxlength="6"'
+    + ' placeholder="......" style="letter-spacing:10px;text-align:center;font-size:24px">'
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn ghost" data-cancel>取消</button>'
+    +   '<button class="btn primary" data-ok>确认</button>'
+    + '</div>',
+    onMount: function(w, close){
+      var inp = w.querySelector('#pin-in');
+      setTimeout(function(){ try { inp.focus(); } catch (e) {} }, 150);
+      function submit(){
+        if (inp.value && inp.value === (DB.settings.pin || '')) {
+          close();
+          if (onOk) onOk();
+        } else {
+          inp.value = '';
+          toast('密码不正确');
+        }
+      }
+      w.querySelector('[data-ok]').onclick = submit;
+      w.querySelector('[data-cancel]').onclick = function(){
+        close();
+        if (onCancel) onCancel();
+      };
+      inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+    }
+  });
+}
+
+/* 统一验证入口：off 直接放行；bio 走原生；其余走密码 */
+function requireAuth(onOk, onCancel){
+  var mode = lockMode();
+  if (mode === 'off') { if (onOk) onOk(); return; }
+
+  if (mode === 'bio' && hasNativeAuth()) {
+    authCallback = { ok: onOk || null, cancel: onCancel || null };
+    var ok = nativeSafe(function(){ NATIVE.requestDeviceCredential(); return true; }, false);
+    if (ok) return;
+  }
+
+  if (!DB.settings.pin) {
+    toast('未设置密码，已跳过验证');
+    if (onOk) onOk();
+    return;
+  }
+  askPinAuth(onOk, onCancel);
+}
+
+/* 删除类操作统一走这里：二次确认 + 验证 */
+function secureConfirm(msg, onOk){
+  confirmBox(msg, function(){
+    confirmBox('二次确认：这一步不可撤销，确定继续吗？', function(){
+      if (DB.settings.authOnDelete === false) { onOk(); return; }
+      requireAuth(onOk, null);
+    }, '确定继续');
+  }, '删除');
+}
+
+/* ---------------- 账号登录 ---------------- */
+function showLogin(){
+  var el = $('#loginScreen');
+  if (!el) return;
+  el.hidden = false;
+  setTimeout(function(){
+    var i = $('#loginPhone');
+    if (i) { try { i.focus(); } catch (e) { } }
+  }, 250);
+}
+
+function doLogin(){
+  var phone = ($('#loginPhone').value || '').replace(/\D/g, '');
+  var pass  = $('#loginPass').value || '';
+  if (!/^1\d{10}$/.test(phone)) { toast('请输入 11 位手机号'); return; }
+  if (ALLOWED_PHONES.indexOf(phone) < 0) { toast('该手机号未授权，登不上'); return; }
+  if (pass.length < 6) { toast('密码至少 6 位'); return; }
+
+  var acc = getAccounts();
+  var h = hashPass(phone + '|' + pass);
+  if (!acc[phone]) {
+    acc[phone] = { phone: phone, hash: h, createdAt: Date.now() };
+    saveAccounts(acc);
+    toast('账号已创建，正在进入');
+  } else if (acc[phone].hash !== h) {
+    toast('密码不正确');
+    return;
+  }
+  loginSuccess(phone);
+}
+
+function loginSuccess(phone){
+  var migrated = false;
+  try {
+    var isNew = !localStorage.getItem(dataKey(phone));
+    localStorage.setItem(CURRENT_KEY, phone);
+    if (isNew) {
+      // 首次登录：把未分区的老数据搬过来（只搬一次）
+      var legacy = localStorage.getItem(LEGACY_KEY);
+      var done   = localStorage.getItem('hcsalon.migrated');
+      if (legacy && !done) {
+        localStorage.setItem(dataKey(phone), legacy);
+        localStorage.setItem('hcsalon.migrated', phone);
+        migrated = true;
+      }
+    }
+  } catch (e) { }
+
+  currentPhone = phone;
+  LS = dataKey(phone);
+  DB = loadDB();
+
+  $('#loginScreen').hidden = true;
+  try { $('#loginPass').value = ''; } catch (e) { }
+
+  syncFab();
+  render();
+  go('home');
+  if (migrated) toast('已导入原有账本数据');
+  toast('已登录 ' + phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'));
+  showLockScreen();
+}
+
+function logout(){
+  secureConfirm('退出登录？数据仍保存在本机，重新登录即可看到。', function(){
+    try { localStorage.removeItem(CURRENT_KEY); } catch (e) { }
+    currentPhone = '';
+    LS = dataKey('');
+    DB = loadDB();
+    sessionUnlocked = false;
+    try { $('#lockScreen').hidden = true; } catch (e) { }
+    showLogin();
+    toast('已退出登录');
+  });
+}
+
+function renderAccount(){
+  var box = $('#accountCard');
+  if (!box) return;
+  var masked = currentPhone
+    ? currentPhone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+    : '未登录';
+  box.innerHTML =
+      '<div class="sec-title">账号</div>'
+    + '<div class="row" style="border:none"><div class="grow">'
+    +   '<div class="nm">' + esc(masked) + '</div>'
+    +   '<div class="mt">数据按手机号分开存放在本机</div></div>'
+    +   '<button class="btn sm ghost" data-act="logout">退出</button></div>';
+}
+
+/* ---------------- 云同步（坚果云 WebDAV） ---------------- */
+var CLOUD_KEY = 'hcsalon.cloud';
+
+/* 3 种同步源预设：坚果云 / 花生壳 / 自定义（预留） */
+var CLOUD_PROVIDERS = {
+  nutstore: {
+    name: '坚果云',
+    url: 'https://dav.jianguoyun.com/dav/',
+    user: '13569465600@139.com',
+    pass: 'a5ahn5cs6fw2q7ha',
+    folder: '美兮',
+    file: 'haircard.json',
+    hasFolder: true          // 坚果云支持文件夹
+  },
+  pnhuake: {
+    name: '花生壳',
+    url: '',                 // 填花生壳给的外网 HTTP 地址
+    user: '',                // 花生壳服务器默认匿名，可留空
+    pass: '',
+    folder: '',              // 花生壳 WebDAV 一般不要求文件夹，直接根目录
+    file: 'haircard.json',
+    hasFolder: false
+  },
+  custom: {
+    name: '自定义',
+    url: '',
+    user: '',
+    pass: '',
+    folder: '',
+    file: 'haircard.json',
+    hasFolder: true
+  }
+};
+
+var cloudBusy = false;
+var lastUploadWasAuto = false;
+var pendingUploadAuto = null;   // null=普通下载；true/false=上传前合并（标注是否自动）
+
+function getCloud(){
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(CLOUD_KEY) || '{}'); } catch (e) { }
+  if (!saved || typeof saved !== 'object') saved = {};
+
+  var prov = saved.provider || 'nutstore';       // 默认坚果云
+  var base = CLOUD_PROVIDERS[prov] ? CLOUD_PROVIDERS[prov] : CLOUD_PROVIDERS.nutstore;
+
+  /* 已有保存的覆盖默认值 */
+  var merged = {
+    provider: prov,
+    name: base.name,
+    url: saved.url || base.url || '',
+    user: saved.user || base.user || '',
+    pass: saved.pass || base.pass || '',
+    folder: saved.folder || base.folder || '',
+    file: saved.file || base.file || 'haircard.json',
+    hasFolder: saved.hasFolder !== undefined ? saved.hasFolder : (base.hasFolder !== undefined ? base.hasFolder : true),
+    delay: saved.delay || 15000,
+    auto: saved.auto !== undefined ? saved.auto : true,
+    lastSync: saved.lastSync || 0
+  };
+  return merged;
+}
+function saveCloud(c){
+  try { localStorage.setItem(CLOUD_KEY, JSON.stringify(c)); } catch (e) { }
+}
+function cloudFileName(){
+  var c = getCloud();
+  var f = (c.file || '').trim();
+  // 旧版默认是「手机号.json」，两台设备会各写一份；统一成固定名才能互相同步
+  if (!f || /^\d{11}\.json$/i.test(f)) return 'haircard.json';
+  return f;
+}
+
+/** 拼出实际的目录地址：服务器 + 文件夹 + /（花生壳无文件夹 → 直接用根目录） */
+function cloudBase(){
+  var c = getCloud();
+  var base = (c.url || '').trim();
+  if (!base) return '';
+  if (!/\/$/.test(base)) base += '/';
+
+  // 花生壳（hasFolder=false）直接用根目录，不拼文件夹
+  if (c.hasFolder === false) return base;
+
+  var folder = (c.folder || '').trim().replace(/^\/+/, '').replace(/\/+$/, '');
+  if (!folder) return base;
+  try {
+    folder = folder.split('/').map(function(seg){
+      return encodeURIComponent(seg);
+    }).join('/');
+  } catch (e) { }
+  return base + folder + '/';
+}
+function hasNativeDav(){
+  return !!(typeof NATIVE !== 'undefined' && NATIVE
+    && typeof NATIVE.davUpload === 'function');
+}
+
+/* 是否支持同步：原生桥 OR 浏览器（有 fetch）都算支持 */
+function hasSyncSupport(){
+  return hasNativeDav() || (typeof fetch === 'function');
+}
+
+/* ---------------- 纯 JS WebDAV 客户端（网页版用，浏览器直接同步） ---------------- */
+function jsBasicAuth(user, pass){
+  var s = (user || '') + ':' + (pass || '');
+  try { return 'Basic ' + btoa(unescape(encodeURIComponent(s))); }
+  catch (e) { return 'Basic ' + btoa(s); }
+}
+
+/* 统一走原生桥或 JS：返回 Promise */
+function davFetch(op, url, user, pass, name, content){
+  var fullUrl = url + name;
+  if (op === 'test') fullUrl = url + 'haircard_probe.json';
+
+  return fetch(fullUrl, {
+    method: (op === 'upload' || op === 'test') ? 'PUT' : 'GET',
+    headers: {
+      'Authorization': jsBasicAuth(user, pass),
+      'Content-Type': 'application/json; charset=utf-8'
+    },
+    body: (op === 'upload' || op === 'test') ? (op === 'upload' ? content : '{"probe":1}') : undefined
+  }).then(function(res){
+    if (res.status === 401) throw new Error('认证失败（401）：账号或密码不对');
+    if (res.status === 404) throw new Error('404：路径不存在（检查地址/文件夹）');
+    if (res.status >= 400) throw new Error('HTTP ' + res.status);
+    if (op === 'download') return res.text();
+    return '';
+  }).then(function(body){
+    return { op: op, ok: true, data: body || null };
+  }).catch(function(e){
+    return { op: op, ok: false, err: (e && e.message) || '请求失败' };
+  });
+}
+
+/* 网页版统一入口：把所有同步操作路由到 JS 或原生桥，并复用 __hcSyncResult */
+function webDavCall(op){
+  var c = getCloud();
+  var base = cloudBase();
+  if (!base) { toast('请先配置服务器地址'); return; }
+
+  if (hasNativeDav()) {
+    // 原生版走桥
+    if (op === 'test') NATIVE.davTest(base, c.user, c.pass, 'haircard_probe.json');
+    else if (op === 'upload') NATIVE.davUpload(base, c.user, c.pass, cloudFileName(), JSON.stringify(DB));
+    else NATIVE.davDownload(base, c.user, c.pass, cloudFileName());
+    return;
+  }
+
+  // 网页版走 JS
+  cloudBusy = true;
+  var p;
+  if (op === 'test') {
+    p = davFetch('test', base, c.user, c.pass, cloudFileName());
+  } else if (op === 'upload') {
+    p = davFetch('upload', base, c.user, c.pass, cloudFileName(), JSON.stringify(DB));
+  } else {
+    p = davFetch('download', base, c.user, c.pass, cloudFileName());
+  }
+  p.then(function(r){
+    r.op = op;
+    __hcSyncResult(r);
+    cloudBusy = false;
+  });
+}
+
+/* 直接上传（覆盖云端，不先合并） */
+function uploadDirect(){
+  var c = getCloud();
+  var base = cloudBase();
+  if (!base) { cloudBusy = false; toast('请先配置服务器地址'); return; }
+  lastUploadWasAuto = false;  /* 手动上传 */
+
+  if (hasNativeDav()) {
+    NATIVE.davUpload(base, c.user, c.pass, cloudFileName(), JSON.stringify(DB));
+    return;
+  }
+  davFetch('upload', base, c.user, c.pass, cloudFileName(), JSON.stringify(DB)).then(function(r){
+    r.op = 'upload';
+    __hcSyncResult(r);
+    cloudBusy = false;
+  });
+}
+
+function renderCloud(){
+  var box = $('#cloudCard');
+  if (!box) return;
+  var c = getCloud();
+  var last = c.lastSync ? fmtDT(c.lastSync) : '还没同步过';
+
+  // 已配置判断：坚果云要地址+账号+密码；花生壳/自定义只要地址
+  var configured;
+  if (c.provider === 'nutstore') configured = !!(c.url && c.user && c.pass);
+  else configured = !!c.url;
+
+  var sourceName = (CLOUD_PROVIDERS[c.provider] || {}).name || c.provider;
+  var sourceLine = c.provider === 'nutstore'
+    ? esc(c.user || '')
+    : esc(c.url || '');
+
+  box.innerHTML =
+      '<div class="sec-title">云同步（' + esc(sourceName) + '）</div>'
+    + '<div class="row" style="border:none"><div class="grow">'
+    +   '<div class="nm">' + (configured ? '已配置' : '未配置') + '</div>'
+    +   '<div class="mt">' + sourceLine + '</div>'
+    +   '<div class="mt">最近：' + esc(last) + '</div></div>'
+    +   '<button class="btn sm" data-act="cloud-config">配置</button></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">自动同步</div><div class="mt">'
+    +   (c.auto ? '改动后自动上传（最快每分钟一次）' : '已关闭，只用下面的按钮手动传') + '</div></div>'
+    +   '<button class="btn sm' + (c.auto ? ' primary' : '') + '" data-act="toggle-auto-sync">'
+    +   (c.auto ? '开' : '关') + '</button></div>'
+    + (configured
+        ? '<div class="btnrow" style="margin-top:8px">'
+          + '<button class="btn" data-act="cloud-test">测试</button>'
+          + '<button class="btn primary" data-act="cloud-up">上传</button>'
+          + '<button class="btn" data-act="cloud-down">下载</button></div>'
+        : '')
+    + '<div class="hint">'
+    +   (hasSyncSupport()
+          ? '当前同步源：' + esc(sourceName) + '。可点「配置」切换坚果云 / 花生壳 / 自定义。'
+          : '当前环境不支持云同步（需要浏览器或原生版 APP）')
+    + '</div>';
+}
+
+function cloudConfigSheet(){
+  // 三个配置页：坚果云 / WebDAV / 自定义
+  var provs = [
+    { k:'nutstore', name:'坚果云', desc:'邮箱 + 应用密码 + 文件夹（已预填）' },
+    { k:'pnhuake',  name:'WebDAV', desc:'花生壳等，填地址，可免账号' },
+    { k:'custom',   name:'自定义', desc:'全字段自己填' }
+  ];
+  openSheet({
+    title:'选择同步源',
+    body:
+      provs.map(function(p){
+        return '<div class="row" data-cloud-prov="'+p.k+'" style="cursor:pointer">'
+          + '<div class="ava">'+(p.k==='nutstore'?'坚果':(p.k==='pnhuake'?'WD':'自'))+'</div>'
+          + '<div class="grow"><div class="nm">'+esc(p.name)+'</div>'
+          +   '<div class="mt">'+esc(p.desc)+'</div></div>'
+          + '<div class="mt">›</div></div>';
+      }).join('')
+      + '<div class="btnrow" style="margin-top:14px"><button class="btn ghost block" data-cancel>取消</button></div>',
+    onMount:function(w, close){
+      w.querySelector('[data-cancel]').onclick = close;
+      $$('[data-cloud-prov]', w).forEach(function(row){
+        row.onclick = function(){ close(); cloudConfigForm(row.getAttribute('data-cloud-prov')); };
+      });
+    }
+  });
+}
+
+function cloudConfigForm(prov){
+  var c = getCloud();
+  var isNut = (prov === 'nutstore');
+  var isPn  = (prov === 'pnhuake');
+
+  // 显示用的当前值（若切到某类型，尽量保留该类型的旧值）
+  var url = (prov === 'nutstore' && c.provider !== 'nutstore') ? CLOUD_PROVIDERS.nutstore.url : c.url || '';
+  var user = c.user || '';
+  var pass = c.pass || '';
+  var folder = c.folder || (isNut ? CLOUD_PROVIDERS.nutstore.folder : '');
+  var file = c.file || 'haircard.json';
+
+  openSheet({
+    title: isNut ? '坚果云' : (isPn ? 'WebDAV' : '自定义'),
+    body:
+      '<label class="field"><span>服务器地址</span><input class="input" id="cf-url" value="'
+    +   esc(url) + '" placeholder="' + (isNut ? 'https://dav.jianguoyun.com/dav/' : 'https://服务器地址/') + '"></label>'
+    + '<label class="field"><span>账号' + (isPn ? '（可留空）' : '') + '</span><input class="input" id="cf-user" value="'
+    +   esc(user) + '" placeholder="邮箱 / 用户名"></label>'
+    + '<label class="field"><span>密码' + (isPn ? '（可留空）' : '') + '</span><input class="input" id="cf-pass" type="password" value="'
+    +   esc(pass) + '" placeholder="密码 / 应用密码"></label>'
+    + (!isPn
+        ? '<label class="field"><span>文件夹</span><input class="input" id="cf-folder" value="'
+          + esc(folder) + '"></label>'
+        : '')
+    + '<label class="field"><span>远端文件名</span><input class="input" id="cf-file" value="'
+    +   esc(file) + '"></label>'
+    + '<div class="hint">' + (isNut
+        ? '坚果云：用「账户信息→安全选项→第三方应用管理」生成的应用密码。'
+        : (isPn ? 'WebDAV：填花生壳等给的外网地址，文件夹不用填。' : '自定义：填任意 WebDAV 地址和账号。'))
+      + '</div>'
+    + '<div class="btnrow" style="margin-top:14px">'
+    +   '<button class="btn ghost" data-back>‹ 返回</button>'
+    +   '<button class="btn primary" data-save>保存</button></div>',
+    onMount:function(w, close){
+      w.querySelector('[data-back]').onclick = function(){ close(); cloudConfigSheet(); };
+      w.querySelector('[data-save]').onclick = function(){
+        var u  = w.querySelector('#cf-url').value.trim();
+        var us = w.querySelector('#cf-user').value.trim();
+        var ps = w.querySelector('#cf-pass').value;
+        var f  = w.querySelector('#cf-file').value.trim() || 'haircard.json';
+        var fo = isPn ? '' : (w.querySelector('#cf-folder') ? w.querySelector('#cf-folder').value.trim() : '');
+
+        if (isNut) { if (!u || !us || !ps) { toast('坚果云需要地址、账号、密码'); return; } }
+        else { if (!u) { toast('请填写服务器地址'); return; } }
+
+        saveCloud({
+          provider: prov,
+          url: u, user: us, pass: ps,
+          folder: fo,
+          file: f,
+          delay: c.delay || 1000,
+          lastSync: c.lastSync || 0,
+          auto: c.auto || false,
+          hasFolder: !isPn
+        });
+        close(); renderCloud();
+        toast('已保存');
+      };
+    }
+  });
+}
+
+function cloudCall(op){
+  if (!hasSyncSupport()) { toast('当前环境不支持云同步'); return; }
+  var c = getCloud();
+  if (!c.url) { toast('请先点「配置」填写同步信息'); return; }
+  if (cloudBusy) { toast('正在同步，请稍等…'); return; }
+
+  cloudBusy = true;
+  try {
+    if (op === 'test') { toast('正在测试连接…'); }
+    else if (op === 'upload') {
+      // 上传 = 直接覆盖云端（不再先合并）
+      toast('正在上传…');
+      pendingUploadAuto = null;
+      uploadDirect();
+    }
+    else { toast('正在下载…'); pendingUploadAuto = null; webDavCall('download'); }
+  } catch (e) {
+    cloudBusy = false;
+    pendingUploadAuto = null;
+    toast('调用失败：' + e.message);
+  }
+}
+
+window.__hcBackPress = function(){
+  // 1) 有弹窗 → 关掉最上面一个
+  if (openSheets.length) {
+    var top = openSheets[openSheets.length - 1];
+    if (top && top.__hcClose) top.__hcClose();
+    return;
+  }
+  // 2) 锁屏挡着 → 不退出
+  if (lockMode() !== 'off' && !sessionUnlocked) { return; }
+  // 3) 二级页面 → 回主界面
+  if (view !== 'home') { go('home'); return; }
+  // 4) 主界面 → 再按一次退出
+  nativeSafe(function(){ NATIVE.backExit(); }, null);
+};
+
+/* 原生同步结果回调 */
+window.__hcSyncResult = function(r){
+  if (!r) { cloudBusy = false; autoSyncing = false; pendingUploadAuto = null; return; }
+  var c = getCloud();
+
+  /* ---- 测试连接 ---- */
+  if (r.op === 'test') {
+    cloudBusy = false;
+    if (r.ok) {
+      c.lastSync = Date.now(); saveCloud(c); renderCloud();
+      toast('连接成功，可以同步了');
+    } else {
+      toast('连接失败：' + (r.err || '未知错误'));
+    }
+    return;
+  }
+
+  /* ---- 下载（可能是「上传前合并」的第一步）---- */
+  if (r.op === 'download') {
+    var isForUpload = (pendingUploadAuto !== null);
+    var isAuto = pendingUploadAuto;
+    pendingUploadAuto = null;
+
+    // 静默合并云端数据（不打扰）
+    if (r.ok && r.data) {
+      try {
+        var remote = JSON.parse(r.data);
+        if (remote && (remote.members || remote.records)) mergeQuiet(remote);
+      } catch (e) { }
+    }
+
+    if (isForUpload) {
+      // 合并完成，接着上传
+      lastUploadWasAuto = !!isAuto;
+      try {
+        NATIVE.davUpload(cloudBase(), c.user, c.pass, cloudFileName(), JSON.stringify(DB));
+      } catch (e) {
+        cloudBusy = false;
+        autoSyncing = false;
+        lastUploadWasAuto = false;
+        if (!isAuto) toast('上传失败：' + e.message);
+      }
+      return;
+    }
+
+    // 普通「下载」：先给用户确认
+    cloudBusy = false;
+    if (!r.ok) { toast('下载失败：' + (r.err || '未知错误')); return; }
+    var remote2;
+    try { remote2 = JSON.parse(r.data || '{}'); }
+    catch (e) { toast('云端文件解析失败'); return; }
+    if (!remote2 || (!remote2.members && !remote2.records)) {
+      toast('云端文件不是账本数据'); return;
+    }
+    var rt = remote2.updatedAt || 0;
+    var lt = DB.updatedAt || 0;
+    var msg = rt > lt
+      ? ('云端数据较新（' + fmtDT(rt) + '），合并到本机吗？两边的记录都会保留。')
+      : ('云端数据（' + fmtDT(rt || 0) + '）不比本地新，仍要合并吗？两边的记录都会保留。');
+    confirmBox(msg, function(){ applyRemote(remote2); }, '合并');
+    return;
+  }
+
+  /* ---- 上传完成 ---- */
+  if (r.op === 'upload') {
+    cloudBusy = false;
+    autoSyncing = false;
+    if (r.ok) {
+      c.lastSync = Date.now();
+      saveCloud(c);
+      if (lastUploadWasAuto) {
+        if (view === 'more') renderCloud();
+      } else {
+        renderCloud();
+        toast('已上传到云端');
+      }
+      if (autoSyncPending) flushAutoSync();
+    } else {
+      if (!lastUploadWasAuto) {
+        toast('上传失败：' + (r.err || '未知错误'));
+      } else {
+        // 自动同步失败（多半没网）：60 秒后静默重试
+        autoSyncPending = true;
+        if (autoSyncTimer) clearTimeout(autoSyncTimer);
+        autoSyncTimer = setTimeout(function(){ autoSyncTimer = null; flushAutoSync(); }, 60000);
+      }
+    }
+    lastUploadWasAuto = false;
+    return;
+  }
+};
+
+function applyRemote(remote){
+  /* 合并而不是覆盖：按 id 取并集，两台设备的改动都保留 */
+  var seenM = {}, seenR = {}, seenL = {};
+  DB.members.forEach(function(x){ if (x && x.id) seenM[x.id] = 1; });
+  DB.records.forEach(function(x){ if (x && x.id) seenR[x.id] = 1; });
+  DB.logs.forEach(function(x){    if (x && x.id) seenL[x.id] = 1; });
+
+  var addM = 0, addR = 0;
+  (remote.members || []).forEach(function(x){
+    if (x && x.id && !seenM[x.id]) { DB.members.push(x); seenM[x.id] = 1; addM++; }
+  });
+  (remote.records || []).forEach(function(x){
+    if (x && x.id && !seenR[x.id]) { DB.records.push(x); seenR[x.id] = 1; addR++; }
+  });
+  (remote.logs || []).forEach(function(x){
+    if (x && x.id && !seenL[x.id]) { DB.logs.push(x); seenL[x.id] = 1; }
+  });
+
+  /* 设置类：取时间较新的那份 */
+  if ((remote.updatedAt || 0) > (DB.updatedAt || 0)) {
+    DB.settings = Object.assign(clone(DEFAULTS.settings), remote.settings || {});
+  }
+  DB.updatedAt = Math.max(DB.updatedAt || 0, remote.updatedAt || 0);
+  save();
+
+  var c = getCloud();
+  c.lastSync = Date.now();
+  saveCloud(c);
+  render(); renderCloud();
+
+  if (addM || addR) {
+    toast('已合并：会员 +' + addM + '，流水 +' + addR);
+  } else {
+    toast('已合并，没有新数据');
+  }
+}
+
+/* 静默合并（上传前用，不弹窗、不触发自动同步） */
+function mergeQuiet(remote){
+  var seenM = {}, seenR = {}, seenL = {};
+  DB.members.forEach(function(x){ if (x && x.id) seenM[x.id] = 1; });
+  DB.records.forEach(function(x){ if (x && x.id) seenR[x.id] = 1; });
+  DB.logs.forEach(function(x){    if (x && x.id) seenL[x.id] = 1; });
+
+  (remote.members || []).forEach(function(x){
+    if (x && x.id && !seenM[x.id]) { DB.members.push(x); seenM[x.id] = 1; }
+  });
+  (remote.records || []).forEach(function(x){
+    if (x && x.id && !seenR[x.id]) { DB.records.push(x); seenR[x.id] = 1; }
+  });
+  (remote.logs || []).forEach(function(x){
+    if (x && x.id && !seenL[x.id]) { DB.logs.push(x); seenL[x.id] = 1; }
+  });
+
+  if ((remote.updatedAt || 0) > (DB.updatedAt || 0)) {
+    DB.settings = Object.assign(clone(DEFAULTS.settings), remote.settings || {});
+  }
+  DB.updatedAt = Math.max(DB.updatedAt || 0, remote.updatedAt || 0);
+
+  // 直接落盘，不调 save()（避免再次触发自动上传造成循环）
+  try { localStorage.setItem(LS, JSON.stringify(DB)); } catch (e) { }
+  render();
+}
+
+/* ---------------- 自动同步（方案A：改动即上传） ---------------- */
+var autoSyncTimer   = null;     // 15 秒防抖
+var autoSyncPending = false;    // 有改动待上传
+var autoSyncing     = false;    // 正在上传
+var lastAutoUpAt    = 0;        // 上次自动上传时间（最小间隔 60 秒）
+
+function canAutoSync(){
+  var c = getCloud();
+  return !!(c.auto && c.url && hasSyncSupport());
+}
+
+function scheduleAutoSync(){
+  if (!canAutoSync()) return;
+  autoSyncPending = true;
+  if (autoSyncTimer) clearTimeout(autoSyncTimer);
+
+  // 延迟 1 秒同步（连续操作会合并到 1 秒后一起传）
+  var wait = 1000;
+  autoSyncTimer = setTimeout(function(){
+    autoSyncTimer = null;
+    flushAutoSync();
+  }, wait);
+}
+
+function flushAutoSync(){
+  if (!canAutoSync()) { autoSyncPending = false; return; }
+  if (autoSyncing) return;            // 正在传，等回调里再触发
+  if (!autoSyncPending) return;
+
+  autoSyncPending = false;
+  autoSyncing = true;
+  lastAutoUpAt = Date.now();
+  lastUploadWasAuto = true;
+
+  try {
+    // 自动同步 = 直接上传覆盖（与手动上传一致）
+    uploadDirect();
+  } catch (e) {
+    autoSyncing = false;
+    pendingUploadAuto = null;
+    lastUploadWasAuto = false;
+  }
+}
+
+/* 权限设置：悬浮窗 / 无障碍 / 后台 */
+function permEntryHTML(){
+  var can  = nativeSafe(function(){ return NATIVE.canOverlay(); }, false);
+  var a11y = nativeSafe(function(){ return NATIVE.isA11yOn(); }, false);
+  var status = '悬浮窗' + (can ? '✓' : '未开') + ' · 无障碍' + (a11y ? '✓' : '未开');
+  return '<div class="sec-title">权限设置</div>'
+    + '<div class="row" style="border:none"><div class="grow">'
+    +   '<div class="nm">悬浮窗 / 无障碍 / 后台</div>'
+    +   '<div class="mt">' + status + '</div></div>'
+    +   '<button class="btn sm" data-act="go" data-view="perms">去设置</button></div>';
+}
+
+function renderPermEntry(){
+  var box = $('#permEntryCard');
+  if (box) box.innerHTML = permEntryHTML();
+}
+
+function renderPerms(){
+  var can  = nativeSafe(function(){ return NATIVE.canOverlay(); }, false);
+  var a11y = nativeSafe(function(){ return NATIVE.isA11yOn(); }, false);
+  var run  = nativeSafe(function(){ return NATIVE.isOverlayRunning(); }, false);
+
+  var od = $('#permOverlayDesc');
+  if (od) od.innerHTML = can
+    ? '已授予「显示在其他应用上层」，悬浮球可以正常显示。'
+    : '需要开启才能在其他应用上方显示悬浮球。点击下方按钮去系统授权。';
+  var ob = $('#permOverlayBtn');
+  if (ob) {
+    ob.textContent = can ? '已开启' : '去开启';
+    ob.className = 'btn block ' + (can ? 'ghost' : 'primary');
+  }
+
+  var ad = $('#permA11yDesc');
+  if (ad) ad.innerHTML = a11y
+    ? '已连接无障碍服务，可以读屏抓账单。'
+    : '开启后才能在美团/抖音等应用里自动识别团购账单。点击下方按钮去系统开启。';
+  var ab = $('#permA11yBtn');
+  if (ab) {
+    ab.textContent = a11y ? '已开启' : '去开启';
+    ab.className = 'btn block ' + (a11y ? 'ghost' : 'primary');
+  }
+
+  var ps = $('#permSummary');
+  if (ps) ps.innerHTML =
+      '悬浮窗：' + (can ? '已开启 ✓' : '未开启 ✗') + '<br>'
+    + '无障碍：' + (a11y ? '已开启 ✓' : '未开启 ✗') + '<br>'
+    + '悬浮球进程：' + (run ? '运行中' : '未运行');
+}
+
+/* ---------------- 锁定页 ---------------- */
+function showLockScreen(){
+  var el = $('#lockScreen');
+  if (!el) return;
+  if (lockMode() === 'off') { el.hidden = true; sessionUnlocked = true; return; }
+
+  sessionUnlocked = false;
+  el.hidden = false;
+
+  var bio = (lockMode() === 'bio') && hasNativeAuth();
+  $('#lockBio').hidden = !bio;
+  $('#lockPinWrap').hidden = !DB.settings.pin;
+  $('#lockTip').textContent = bio
+    ? '点下面按钮，用指纹 / 系统密码解锁'
+    : '请输入 APP 密码';
+
+  if (bio) {
+    setTimeout(tryBioUnlock, 300);
+  } else if (DB.settings.pin) {
+    setTimeout(function(){
+      var i = $('#lockPin');
+      if (i) { try { i.focus(); } catch (e) {} }
+    }, 250);
+  }
+}
+
+function tryBioUnlock(){
+  if (!hasNativeAuth()) { toast('这台设备不支持原生指纹验证'); return; }
+  requireAuth(doUnlockAfterAuth, function(){ });
+}
+
+function checkLockPin(){
+  var inp = $('#lockPin');
+  if (!inp) return;
+  if (inp.value && inp.value === (DB.settings.pin || '')) {
+    doUnlockAfterAuth();
+  } else {
+    inp.value = '';
+    toast('密码不正确');
+  }
+}
+
+function doUnlockAfterAuth(){
+  sessionUnlocked = true;
+  var el = $('#lockScreen');
+  if (el) el.hidden = true;
+  try { $('#lockPin').value = ''; } catch (e) { }
+  logAction('unlock', { note: '解锁' });
+  render();
+}
+
+/* =========================================================
+   10) 备份 / 恢复
+   ========================================================= */
+function exportSheet(){
+  var json = JSON.stringify(DB, null, 2);
+  var name = 'haircard-backup-' + fmtDate(Date.now()).replace(/-/g,'') + '.json';
+  openSheet({
+    title:'导出备份',
+    body:
+      '<div class="tips">共 '+DB.members.length+' 位会员 / '+DB.records.length+' 笔流水。'
+    + '下面文本框里就是完整数据，全选复制保存到微信收藏/笔记即可。</div>'
+    + '<textarea class="input ta" id="exp-text" style="margin-top:10px;min-height:150px;font-size:12px">'+esc(json)+'</textarea>'
+    + '<div class="btnrow" style="margin-top:10px">'
+    +   '<button class="btn" data-copy>复制</button>'
+    +   '<button class="btn primary" data-dl>存为文件</button></div>',
+    onMount:function(w,close){
+      $('[data-copy]',w).onclick = function(){
+        var ta = w.querySelector('#exp-text');
+        ta.focus(); ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch(e){}
+        if (!ok && navigator.clipboard) {
+          navigator.clipboard.writeText(ta.value).then(function(){ toast('已复制'); }, function(){ toast('请长按手动复制'); });
+          return;
+        }
+        toast(ok ? '已复制到剪贴板' : '请长按文本框手动复制');
+      };
+      $('[data-dl]',w).onclick = function(){
+        try {
+          var blob = new Blob([json], { type:'application/json' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+          toast('已保存到下载目录');
+        } catch(e){ toast('下载被拦截，请用「复制」'); }
+      };
+    }
+  });
+}
+
+function importSheet(){
+  openSheet({
+    title:'导入备份',
+    body:
+      '<div class="tips">粘贴之前导出的 JSON，选择「覆盖」或「合并」。合并时同 ID 记录会跳过。</div>'
+    + '<textarea class="input ta" id="imp-text" style="margin-top:10px;min-height:150px;font-size:12px" placeholder="在此粘贴 JSON"></textarea>'
+    + '<div class="btnrow" style="margin-top:10px">'
+    +   '<button class="btn" data-merge>合并</button>'
+    +   '<button class="btn primary" data-replace>覆盖</button></div>',
+    onMount:function(w,close){
+      function readData(){
+        var txt = w.querySelector('#imp-text').value.trim();
+        if (!txt) { toast('请先粘贴内容'); return null; }
+        var d;
+        try { d = JSON.parse(txt); } catch(e){ toast('JSON 格式有误'); return null; }
+        if (!d || (!Array.isArray(d.members) && !Array.isArray(d.records))) {
+          toast('不是本 APP 的备份文件'); return null;
+        }
+        return d;
+      }
+      $('[data-replace]',w).onclick = function(){
+        var d = readData(); if (!d) return;
+        confirmBox('覆盖会清掉当前全部数据，确定？', function(){
+          DB.members = d.members || [];
+          DB.records = d.records || [];
+          DB.settings = Object.assign(DB.settings, d.settings || {});
+          save(); close(); render(); toast('已覆盖导入');
+        }, '覆盖导入');
+      };
+      $('[data-merge]',w).onclick = function(){
+        var d = readData(); if (!d) return;
+        var ids = {}; DB.members.forEach(function(m){ ids[m.id]=1; });
+        var rids = {}; DB.records.forEach(function(r){ rids[r.id]=1; });
+        (d.members||[]).forEach(function(m){ if (!ids[m.id]) { DB.members.push(m); ids[m.id]=1; } });
+        (d.records||[]).forEach(function(r){ if (!rids[r.id]) { DB.records.push(r); rids[r.id]=1; } });
+        save(); close(); render(); toast('已合并导入');
+      };
+    }
+  });
+}
+
+/* =========================================================
+   11) 悬浮球（应用内）
+   ========================================================= */
+function quickSheet(){
+  var members = DB.members.slice();
+  openSheet({
+    title:'快捷记账',
+    body:
+      '<div class="big-money"><span>¥</span><input id="q-amount" inputmode="decimal" placeholder="0.00" autofocus></div>'
+    + '<div class="field"><span>支付方式</span><div class="chips" id="q-methods">'
+    +   ['现金','微信','支付宝','储值卡'].map(function(x,i){
+          return '<button class="chip'+(i===0?' on':'')+'" data-m="'+x+'">'+x+'</button>'; }).join('')
+    + '</div></div>'
+    + '<label class="field"><span>会员</span><select class="input" id="q-member">'
+    +   '<option value="">散客</option>'
+    +   members.map(function(m){ return '<option value="'+m.id+'">'+esc(m.name)+'</option>'; }).join('')
+    + '</select></label>'
+    + '<label class="field"><span>备注</span><input class="input" id="q-note" placeholder="剪发 / 染发 / 护理"></label>'
+    + '<div class="btnrow"><button class="btn ghost" data-cancel>取消</button>'
+    + '<button class="btn primary" data-save>记一笔</button></div>',
+    onMount:function(w,close){
+      $('[data-cancel]',w).onclick = close;
+      $('[data-save]',w).onclick = function(){
+        var amt = fen(w.querySelector('#q-amount').value);
+        if (amt <= 0) { toast('请填写金额'); return; }
+        var method = chipValue(w, '#q-methods .chip.on') || '现金';
+        var mid = w.querySelector('#q-member').value;
+        var note = w.querySelector('#q-note').value.trim();
+
+        if (method === '储值卡') {
+          var m = mid ? getMember(mid) : null;
+          if (!m) { toast('请选择会员'); return; }
+          if ((m.balance||0) < amt) { toast('余额不足'); return; }
+          m.balance -= amt;
+        }
+        var mm = mid ? getMember(mid) : null;
+        addRecord({
+          kind:'consume', memberId: mid || null, memberName: mm ? mm.name : '',
+          amount: amt, listAmount: amt, method: method,
+          note: note, source:'manual'
+        });
+        toast('已记 ¥'+yuan(amt));
+        close(); render();
+      };
+    }
+  });
+}
+
+function initFab(){
+  var fab = $('#fab');
+  var pos = DB.settings.fabPos || { right: 16, bottom: 110 };
+  function place(){
+    fab.style.right  = Math.max(4, Math.min(window.innerWidth  - 58, pos.right)) + 'px';
+    fab.style.bottom = Math.max(80, Math.min(window.innerHeight - 120, pos.bottom)) + 'px';
+  }
+  place();
+
+  var sx=0, sy=0, ox=0, oy=0, moved=false, dragging=false;
+  fab.addEventListener('pointerdown', function(e){
+    dragging = true; moved = false;
+    sx = e.clientX; sy = e.clientY;
+    ox = parseFloat(fab.style.right)||16;
+    oy = parseFloat(fab.style.bottom)||96;
+    fab.setPointerCapture && fab.setPointerCapture(e.pointerId);
+  });
+  fab.addEventListener('pointermove', function(e){
+    if (!dragging) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+    pos.right  = Math.max(4, Math.min(window.innerWidth - 58, ox - dx));
+    pos.bottom = Math.max(80, Math.min(window.innerHeight - 120, oy - dy));
+    place();
+  });
+  fab.addEventListener('pointerup', function(){
+    dragging = false;
+    if (!moved) { quickSheet(); return; }
+    DB.settings.fabPos = { right: pos.right, bottom: pos.bottom };
+    save();
+  });
+}
+
+function syncFab(){
+  var fab = $('#fab');
+  if (DB.settings.fab) { fab.hidden = false; } else { fab.hidden = true; }
+}
+
+/* =========================================================
+   12) 事件分发
+   ========================================================= */
+var ACT = {
+  'go': function(el){ go(el.getAttribute('data-view')); },
+  'new-member': function(){ memberForm(null); },
+  'member': function(el){ var m=getMember(el.getAttribute('data-id')); if(m) memberDetail(m); },
+  'edit-member': function(el){
+    var m=getMember(el.getAttribute('data-id'));
+    if(!m) return;
+    $$('.sheet-wrap').forEach(function(x){ x.remove(); });
+    memberForm(m);
+  },
+  'diag': function(){ diagSheet(); },
+  'do-login': function(){ doLogin(); },
+  'logout': function(){ logout(); },
+  'more-sub': function(){ moreSubSheet(); },
+  'cloud-config': function(){ cloudConfigSheet(); },
+  'toggle-auto-sync': function(){
+    var c = getCloud();
+    if (!c.url || !c.user || !c.pass) { toast('请先点「配置」填写同步信息'); return; }
+    c.auto = !c.auto;
+    saveCloud(c);
+    renderCloud();
+    toast(c.auto ? '已开启自动同步' : '已关闭自动同步');
+  },
+  'cloud-test': function(){ cloudCall('test'); },
+  'cloud-up': function(){ cloudCall('upload'); },
+  'cloud-down': function(){ cloudCall('download'); },
+  'lock-config': function(){ lockConfigSheet(); },
+  'toggle-auth-delete': function(){
+    DB.settings.authOnDelete = (DB.settings.authOnDelete === false);
+    save(); renderSecurity();
+    toast(DB.settings.authOnDelete ? '删除需要验证身份' : '删除只二次确认');
+  },
+  'open-logs': function(){ logFilterMember = ''; go('logs'); },
+  'perm-battery': function(){
+    /* 打开电池优化设置（部分机型） */
+    try {
+      if (navigator.userAgent.indexOf('Android') >= 0 && window.Native && NATIVE.openBatterySetting) {
+        NATIVE.openBatterySetting();
+      } else {
+        toast('请到 设置 → 电池 → 允许后台运行');
+      }
+    } catch (e) { toast('请到 设置 → 电池 → 允许后台运行'); }
+  },
+  'clear-logs': function(){
+    secureConfirm('清空全部操作日志？', function(){
+      DB.logs = [];
+      save(); renderLogs(); renderSecurity();
+      toast('日志已清空');
+    });
+  },
+  'lock-pin-ok': function(){ checkLockPin(); },
+  'lock-bio': function(){ tryBioUnlock(); },
+  'lock-forgot': function(){
+    confirmBox('忘记密码只能用「清空全部数据」的方式解锁，数据无法找回。建议先在别处保留导出的 JSON。确定清空吗？', function(){
+      confirmBox('二次确认：清空后会员、流水、日志全部消失。', function(){
+        DB.members = []; DB.records = []; DB.logs = [];
+        DB.settings.lock = 'off';
+        DB.settings.pin = '';
+        save();
+        doUnlockAfterAuth();
+        toast('已清空并解锁');
+      }, '确定清空');
+    }, '清空并解锁');
+  },
+  'del-member': function(el){
+    var m = getMember(el.getAttribute('data-id'));
+    if (!m) return;
+    secureConfirm('删除会员「'+m.name+'」？其历史流水会保留，但不再关联。', function(){
+      DB.members = DB.members.filter(function(x){ return x.id !== m.id; });
+      logAction('memberdel', {
+        memberId: m.id, memberName: m.name,
+        note: '余额 ¥'+yuan(m.balance||0)+' · 次卡余 '+packLeft(m)+' 次'
+      });
+      save(); render(); toast('已删除');
+      $$('.sheet-wrap').forEach(function(x){ x.remove(); });
+    });
+  },
+  'recharge': function(el){ var m=getMember(el.getAttribute('data-id')); if(m) rechargeSheet(m); },
+  'consume':  function(el){ consumeSheet({ memberId: el.getAttribute('data-id') }); },
+  'pack-use': function(el){
+    var m=getMember(el.getAttribute('data-id'));
+    var pid=el.getAttribute('data-pack');
+    if(!m) return;
+    var pk=(m.packs||[]).filter(function(p){ return p.id===pid; })[0];
+    if(!pk || pk.left<=0){ toast('没有可用次数'); return; }
+    /* 走统一的消费弹层：可改时间、可写项目、金额按开关折算 */
+    $$('.sheet-wrap').forEach(function(x){ x.remove(); });
+    consumeSheet({ memberId: m.id, method: '次卡', packId: pid });
+  },
+  'new-consume': function(){ consumeSheet({}); },
+  'parse': function(){
+    var txt = $('#billText').value;
+    if (!txt.trim()) { toast('先粘贴账单文本'); return; }
+    var r = parseBill(txt);
+    renderScanResult(r);
+    if (!r.amount) toast('没识别出金额，请手动填');
+  },
+  'paste': function(){
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function(t){
+        if (!t) { toast('剪贴板是空的'); return; }
+        $('#billText').value = t;
+        var r = parseBill(t);
+        renderScanResult(r);
+        toast('已读取并解析');
+      }, function(){
+        toast('没有剪贴板权限，请长按输入框手动粘贴');
+        $('#billText').focus();
+      });
+    } else {
+      toast('请长按输入框手动粘贴');
+      $('#billText').focus();
+    }
+  },
+  'clearBill': function(){
+    $('#billText').value = '';
+    $('#scanResult').innerHTML = '';
+  },
+  'save-scan': function(){ saveScan(); },
+  'rec-filter': function(){ recFilterSheet(); },
+  'batch-cancel': function(){
+    recBatchMode = false;
+    recBatchSel = {};
+    $$('#recFilter .chip').forEach(function(x){ x.classList.remove('on'); });
+    var first = $$('#recFilter .chip')[0];
+    if (first) first.classList.add('on');
+    recFilter = 'today';
+    renderRecords();
+    renderBatchBar();
+  },
+  'batch-delete': function(){
+    var ids = [];
+    for (var b in recBatchSel) if (recBatchSel[b]) ids.push(b);
+    if (!ids.length) { toast('还没有勾选记录'); return; }
+    batchDeleteRecords(ids);
+  },
+  'record': function(el){ 
+    var r = DB.records.filter(function(x){ return x.id === el.getAttribute('data-id'); })[0];
+    if (r) recordDetail(r);
+  },
+  'toggle-pack-value': function(){
+    DB.settings.packValue = !DB.settings.packValue;
+    save(); renderMore();
+    toast(DB.settings.packValue
+      ? '已开启：核销按单次折算价计入消费额'
+      : '已关闭：核销金额记 0（预收口径）');
+  },
+  'link-member': function(el){
+    var r = DB.records.filter(function(x){ return x.id === el.getAttribute('data-id'); })[0];
+    if (!r) return;
+    pickMember(function(m){ linkRecord(r, m); }, '关联到会员');
+  },
+  'export': function(){ exportSheet(); },
+  'import': function(){ importSheet(); },
+  'toggle-fab': function(){
+    DB.settings.fab = !DB.settings.fab;
+    save(); syncFab(); renderMore();
+    toast(DB.settings.fab ? '悬浮球已开启' : '悬浮球已关闭');
+  },
+  'wipe': function(){
+    secureConfirm('将删除全部会员、流水与日志，且无法恢复。建议先导出备份。', function(){
+      DB.members = []; DB.records = []; DB.logs = [];
+      save();
+      logAction('wipe', { note: '清空全部数据' });
+      render(); toast('已清空');
+    });
+  }
+};
+
+document.addEventListener('click', function(e){
+  /* 批量模式下点勾选框，不要触发整行的「打开详情」 */
+  if (recBatchMode && e.target.closest && e.target.closest('[data-batch]')) return;
+  var el = e.target.closest ? e.target.closest('[data-act]') : null;
+  if (!el) return;
+  var a = el.getAttribute('data-act');
+  if (ACT[a]) { e.preventDefault(); ACT[a](el); }
+});
+
+/* =========================================================
+   12.5) 原生版桥接（纯网页版没有 window.Native，整段自动跳过）
+   ========================================================= */
+var NATIVE = (typeof window !== 'undefined' && window.Native) ? window.Native : null;
+
+function nativeSafe(fn, def){
+  try { return fn(); } catch (e) { return def; }
+}
+
+/* 把原生捕获的待入账账单取过来，写进本地账本 */
+function nativeDrain(){
+  if (!NATIVE) return;
+  var raw = nativeSafe(function(){ return NATIVE.pullPending(); }, '[]');
+  var arr = [];
+  try { arr = JSON.parse(raw || '[]'); } catch (e) { arr = []; }
+  if (!arr || !arr.length) return;
+
+  var n = 0;
+  /* 去重：优先按订单号（同一订单只入一笔）；无订单号时退回按券码 */
+  var knownKeys = {};
+  for (var ki = 0; ki < DB.records.length; ki++) {
+    var kr = DB.records[ki];
+    if (kr.code) knownKeys['C:' + kr.code] = 1;
+  }
+  for (var i = 0; i < arr.length; i++) {
+    var b = arr[i] || {};
+    var amt = parseInt(b.amount, 10) || 0;
+    if (amt <= 0) continue;
+    var bcode = String(b.code || '');
+    var key = bcode ? ('C:' + bcode) : '';
+    if (key && knownKeys[key]) continue;   // 同一券码，跳过（以核销券码为准）
+    if (key) knownKeys[key] = 1;
+
+    var noteParts = [];
+    if (b.platform) noteParts.push(b.platform);
+    if (b.itemName) noteParts.push(b.itemName);
+    if (b.merchant) noteParts.push(b.merchant);
+    var note = noteParts.join(' · ') || '悬浮窗捕获';
+
+    DB.records.push({
+      id: uid(),
+      ts: b.ts || Date.now(),
+      kind: 'consume',
+      memberId: null,
+      memberName: '',
+      amount: amt,
+      listAmount: amt,
+      method: b.method || '微信',
+      note: note,
+      items: [],
+      source: 'overlay',
+      // 团购字段
+      orderId:   b.orderId || '',
+      itemName:  b.itemName || '',
+      code:      bcode,
+      verifyTime: b.verifyTime || '',
+      verifier:  b.verifier || '',
+      shopId:    b.shopId || '',
+      platform:  b.platform || '',
+      account:   b.account || '',
+      rawText: String(b.raw || '').slice(0, 500)
+    });
+    n++;
+  }
+  if (n > 0) {
+    save();
+    render();
+    toast('已从悬浮窗入账 ' + n + ' 笔');
+  }
+  nativeSafe(function(){ NATIVE.clearPending(); }, null);
+  renderNative();
+}
+window.__hcDrain = nativeDrain;
+
+/* 设置页里的原生卡片 */
+function renderNative(){
+  var box = $('#nativeCard');
+  if (!box) return;
+  if (!NATIVE) { box.hidden = true; return; }
+  box.hidden = false;
+
+  var info = nativeBridgeInfo();
+  var bridgeLine = info.has
+    ? ('已连接 ' + (info.ver || '未知版本') + ' · 指纹接口' + (info.bio ? '可用' : '缺失'))
+    : '未连接（网页版）';
+
+  var can  = nativeSafe(function(){ return NATIVE.canOverlay(); }, false);
+  var a11y = nativeSafe(function(){ return NATIVE.isA11yOn(); }, false);
+  var run  = nativeSafe(function(){ return NATIVE.isOverlayRunning(); }, false);
+  var all  = nativeSafe(function(){ return NATIVE.isCaptureAll(); }, false);
+  var cnt  = nativeSafe(function(){ return NATIVE.pendingCount(); }, 0);
+  var verifier = nativeSafe(function(){ return NATIVE.getVerifier ? String(NATIVE.getVerifier()) : '商户'; }, '商户');
+
+  box.innerHTML =
+      '<div class="sec-title">原生悬浮窗</div>'
+    + '<div class="row" style="border:none"><div class="grow">'
+    +   '<div class="nm">原生桥</div><div class="mt">' + bridgeLine + '</div></div></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">悬浮窗权限</div><div class="mt">' + (can ? '已授权' : '未授权') + '</div></div>'
+    +   '<button class="btn sm' + (can ? ' ghost' : ' primary') + '" data-nact="overlay-perm">'
+    +   (can ? '重新授权' : '去授权') + '</button></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">无障碍服务</div><div class="mt">' + (a11y ? '已开启' : '未开启（抓不到账单）') + '</div></div>'
+    +   '<button class="btn sm' + (a11y ? ' ghost' : ' primary') + '" data-nact="a11y">'
+    +   (a11y ? '去查看' : '去开启') + '</button></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">悬浮球</div><div class="mt">' + (run ? '运行中' : '已停止')
+    +   ' · 待入账 ' + cnt + ' 笔</div></div>'
+    +   '<button class="btn sm" data-nact="overlay-toggle">' + (run ? '关闭' : '开启') + '</button></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">抓取全部应用</div><div class="mt">'
+    +   (all ? '已开启（范围大、噪音也多）' : '只抓微信 / 支付宝 / 云闪付 / QQ') + '</div></div>'
+    +   '<button class="btn sm' + (all ? '' : ' ghost') + '" data-nact="capture-all">'
+    +   (all ? '关闭' : '开启') + '</button></div>'
+    + '<div class="row"><div class="grow">'
+    +   '<div class="nm">核销人（团购识别用）</div><div class="mt">' + esc(verifier) + '</div></div>'
+    +   '<button class="btn sm" data-nact="verifier-toggle">切换</button></div>'
+    + '<div class="btnrow" style="margin-top:10px">'
+    +   '<button class="btn primary" data-nact="drain">立即入账 ' + cnt + ' 笔</button></div>'
+    + '<div class="hint">用法：打开微信/支付宝的账单详情页并让金额显示在屏幕上，脚本读到「支付成功 ¥xx」就自动捕获；'
+    + '点悬浮球可查看最近一笔。所有文字只留在本机，不上传。</div>'
+
+  $$('[data-nact]', box).forEach(function(btn){
+    btn.onclick = function(){
+      var a = btn.getAttribute('data-nact');
+      if (a === 'overlay-perm') {
+        nativeSafe(function(){ NATIVE.openOverlaySetting(); }, null);
+      } else if (a === 'a11y') {
+        nativeSafe(function(){ NATIVE.openA11ySetting(); }, null);
+      } else if (a === 'overlay-toggle') {
+        if (run) nativeSafe(function(){ NATIVE.stopOverlay(); }, null);
+        else nativeSafe(function(){ NATIVE.startOverlay(); }, null);
+        setTimeout(renderNative, 500);
+      } else if (a === 'capture-all') {
+        nativeSafe(function(){ NATIVE.setCaptureAll(!all); }, null);
+        renderNative();
+      } else if (a === 'verifier-toggle') {
+        var next = (verifier === '商户') ? '管理员' : '商户';
+        nativeSafe(function(){ if (NATIVE.setVerifier) NATIVE.setVerifier(next); }, null);
+        renderNative();
+        toast('核销人已设为：' + next);
+      } else if (a === 'drain') {
+        nativeDrain();
+      }
+    };
+  });
+
+  var about = $('#aboutTips');
+  if (about) about.innerHTML =
+      '当前是<b>原生版</b>：内置悬浮球 + 无障碍读屏，可以在微信/支付宝上方直接显示捕获到的金额。<br><br>'
+    + '开启顺序：① 授予悬浮窗权限 → ② 在系统设置里打开「美发账本 · 账单识别」无障碍服务 → ③ 打开悬浮球。<br><br>'
+    + '限制：无障碍只能读到<b>屏幕上可见的文字</b>；如果账单需要下滑才看到金额，请先滑到金额可见的位置。';
+
+  var ver = $('#verTips');
+  if (ver) ver.innerHTML = '美发会员账本 v1.2 · 原生悬浮窗版<br>账本数据存在网页本地存储，卸载会丢，请定期导出备份。';
+}
+
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) {
+    nativeDrain();
+    if (autoSyncPending) flushAutoSync();   // 切回 APP：有积压就补传
+  }
+});
+setTimeout(nativeDrain, 400);
+
+/* 原生版默认只用系统悬浮球，避免屏幕上出现两个球 */
+if (NATIVE && !DB.settings.nativeFABOff) {
+  DB.settings.fab = false;
+  DB.settings.nativeFABOff = true;
+  save();
+}
+
+/* =========================================================
+   13) 启动
+   ========================================================= */
+$('#memberSearch').addEventListener('input', renderMembers);
+
+/* 会员排序 */
+$$('#memberSortChips .chip').forEach(function(c){
+  if (c.getAttribute('data-ms') === (DB.settings.memberSort || 'created')) c.classList.add('on');
+  else c.classList.remove('on');
+  c.addEventListener('click', function(){
+    $$('#memberSortChips .chip').forEach(function(x){ x.classList.toggle('on', x === c); });
+    DB.settings.memberSort = c.getAttribute('data-ms');
+    save();
+    renderMembers();
+  });
+});
+
+$$('#recFilter .chip').forEach(function(c){
+  c.addEventListener('click', function(){
+    var isBatch = c.getAttribute('data-batchmode') === '1';
+    if (isBatch) {
+      // 进入批量模式
+      recBatchMode = true;
+      recBatchSel = {};
+      $$('#recFilter .chip').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on');
+      renderRecords();
+      renderBatchBar();
+      return;
+    }
+    // 普通筛选
+    recBatchMode = false;
+    recBatchSel = {};
+    $$('#recFilter .chip').forEach(function(x){ x.classList.toggle('on', x === c); });
+    recFilter = c.getAttribute('data-rf');
+    renderRecords();
+    renderBatchBar();
+  });
+});
+
+/* 批量勾选 */
+document.addEventListener('click', function(e){
+  var chk = e.target.closest ? e.target.closest('[data-batch]') : null;
+  if (!chk || !recBatchMode) return;
+  e.stopPropagation();
+  var id = chk.getAttribute('data-batch');
+  if (recBatchSel[id]) delete recBatchSel[id];
+  else recBatchSel[id] = 1;
+  renderRecords();
+});
+
+window.addEventListener('resize', function(){
+  var fab = $('#fab');
+  if (fab && !fab.hidden) {
+    var pos = DB.settings.fabPos || { right:16, bottom:110 };
+    fab.style.right  = Math.max(4, Math.min(window.innerWidth - 58, pos.right)) + 'px';
+    fab.style.bottom = Math.max(80, Math.min(window.innerHeight - 120, pos.bottom)) + 'px';
+  }
+});
+
+/* 登录框回车提交 */
+['loginPhone', 'loginPass'].forEach(function(id){
+  var el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+    });
+  }
+});
+
+/* 已登录的号码若不在白名单，自动退出 */
+if (currentPhone && ALLOWED_PHONES.indexOf(currentPhone) < 0) {
+  try { localStorage.removeItem(CURRENT_KEY); } catch (e) { }
+  currentPhone = '';
+  LS = dataKey('');
+  DB = loadDB();
+}
+
+initFab();
+syncFab();
+render();
+go('home');
+
+if (currentPhone) {
+  showLockScreen();      /* 已登录：按需显示锁屏 */
+} else {
+  showLogin();           /* 未登录：先登录 */
+}
+
+})();
+</script>
+</body>
+</html>
